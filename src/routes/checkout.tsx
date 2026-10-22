@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
-import { shippingForOrder } from "@/lib/shipping";
+import { shippingForOrder, FREE_PIX_SHIPPING_THRESHOLD_BRL } from "@/lib/shipping";
 import { cardWhatsAppUrl } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -127,6 +127,7 @@ function Checkout() {
             <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Continue pelo atendimento para combinar o pagamento.</span></span>
           </label>
         </fieldset>
+        {payment === "card" && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && <div role="status" className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm"><p className="font-bold">Frete grátis no Pix! Não quer aproveitar?</p><p className="mt-1 text-muted-foreground">Pagando no Pix, você economiza {brl(shippingForOrder(subtotal, "card"))} no frete.</p><button type="button" onClick={() => { setPayment("pix"); setValidated(false); }} className="mt-3 rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground">Quero aproveitar o frete grátis no Pix</button></div>}
         <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } void beginCard(); }} disabled={pixLoading || cardLoading || (payment === "card" && !!cardOrderId)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
         {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
         {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
