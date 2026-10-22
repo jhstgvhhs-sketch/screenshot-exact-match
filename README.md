@@ -35,3 +35,27 @@ A configuração vazia ou inválida mantém o atendimento indisponível. O clien
 confere o formulário e clica em **Continuar no WhatsApp** para enviar o resumo;
 o carrinho é preservado e nenhum pagamento ou pedido é confirmado pelo site.
 Nunca configure credenciais Blackcat em variáveis `VITE_*`.
+
+## Blackcat Pix — configuração no servidor
+
+A integração usa a documentação https://docs.blackcatoficial.com/ e as funções
+`blackcat-create-pix` e `blackcat-webhook`. A cobrança envia CPF como
+`customer.document = { number, type: 'cpf' }`, endereço com `shipping.number`
+e uma linha de frete de 3780 centavos. Valores são calculados a partir do pedido
+salvo no banco, nunca dos preços enviados pelo navegador. São aceitas de 1 a 10
+unidades por variante.
+
+Configure apenas em **Edge Function Secrets**, nunca no GitHub, no formulário
+administrativo ou em variáveis `VITE_*`:
+
+- `BLACKCAT_API_KEY`: chave secreta da conta aprovada.
+- `BLACKCAT_WEBHOOK_URL`: URL HTTPS pública de `blackcat-webhook`.
+- `BLACKCAT_PIX_ENABLED`: mantenha `false` até validar o fluxo completo.
+
+O webhook consulta a API autenticada da Blackcat para verificar transação e valor;
+não confia apenas no status recebido no POST. Antes da ativação, confirme as
+migrações do banco, a política de reserva/liberação de estoque vigente e o
+tratamento de retentativas de criação de cobrança (inclusive timeout e falha ao
+salvar o identificador no banco). Um erro depois da criação de pedido requer
+conciliação antes de repetir a tentativa. A publicação do código não configura
+secrets, não aplica migrações e não publica as Edge Functions automaticamente.
