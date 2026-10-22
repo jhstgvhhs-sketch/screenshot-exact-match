@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import { brl, SHIPPING_FLAT } from "@/lib/store";
+import { brl } from "@/lib/store";
+import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
 
 export const Route = createFileRoute("/carrinho")({
   head: () => ({
@@ -34,9 +35,9 @@ function Carrinho() {
           </ul>
           <aside className="h-fit space-y-2 rounded-xl border border-border bg-card p-5 text-sm">
             <div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div>
-            <div className="flex justify-between"><span>Frete</span><span>{brl(SHIPPING_FLAT)}</span></div>
-            <div className="flex justify-between border-t border-border pt-2 text-lg font-bold"><span>Total</span><span>{brl(subtotal + SHIPPING_FLAT)}</span></div>
-            <p className="pt-2 text-xs text-muted-foreground">Finalização da compra em construção.</p>
+            <div className="flex justify-between"><span>Frete</span><span>{brl(FIXED_SHIPPING_BRL)}</span></div>
+            <div className="flex justify-between border-t border-border pt-2 text-lg font-bold"><span>Total com frete</span><span>{brl(subtotal + FIXED_SHIPPING_BRL)}</span></div>
+            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Pagamentos ainda não ativados; nenhuma cobrança será realizada.</p>
           </aside>
         </div>
       )}

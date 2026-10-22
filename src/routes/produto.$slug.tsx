@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { productImage, productQuery } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
-import { brl, lookupCep, maskCep, SHIPPING_FLAT, type CepAddress } from "@/lib/store";
+import { brl, lookupCep, maskCep, type CepAddress } from "@/lib/store";
+import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
 
 export const Route = createFileRoute("/produto/$slug")({
   head: () => ({
@@ -74,12 +75,12 @@ function ProdutoPage() {
           <Button variant="buy" size="xl" onClick={() => add(true)}>Comprar agora</Button>
         </div>
         <form className="rounded-xl border border-border bg-card p-4" onSubmit={async (e) => { e.preventDefault(); try { setAddr(await lookupCep(cep)); } catch (err) { toast.error((err as Error).message); } }}>
-          <p className="mb-2 text-sm font-semibold">Calcular frete</p>
+          <p className="mb-2 text-sm font-semibold">Consultar endereço pelo CEP</p>
           <div className="flex gap-2">
             <input value={cep} onChange={(e) => setCep(maskCep(e.target.value))} placeholder="00000-000" aria-label="CEP" className="h-10 flex-1 rounded-lg border border-input bg-background px-3" />
-            <Button type="submit">Calcular</Button>
+            <Button type="submit">Consultar CEP</Button>
           </div>
-          {addr && <p className="mt-3 text-sm">{addr.street}, {addr.district} — {addr.city}/{addr.state}<br /><b>Frete: {brl(SHIPPING_FLAT)}</b></p>}
+          {addr && <p className="mt-3 text-sm">{addr.street}, {addr.district} — {addr.city}/{addr.state}<br /><span className="text-muted-foreground">Frete fixo: {brl(FIXED_SHIPPING_BRL)} para todo o Brasil.</span></p>}
         </form>
       </div>
     </section>

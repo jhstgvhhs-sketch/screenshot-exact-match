@@ -1,4 +1,4 @@
-export const SHIPPING_FLAT = 37.8;
+export { FIXED_SHIPPING_BRL as SHIPPING_FLAT } from "./shipping";
 
 export const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

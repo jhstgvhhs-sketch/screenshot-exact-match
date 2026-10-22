@@ -88,7 +88,7 @@ function Index() {
         {[
           [Truck, "Envio para todo o Brasil", `Frete fixo de ${brl(SHIPPING_FLAT)}`],
           [MapPin, "Endereço pelo CEP", "Digite o CEP e preenchemos o endereço"],
-          [CreditCard, "Pix e cartão", "Pagamento por provedor seguro"],
+          [CreditCard, "Formas de pagamento", "Pix em breve · cartão via WhatsApp"],
           [ShieldCheck, "Dados protegidos", "Não armazenamos dados de cartão"],
         ].map(([Icon, t, d]) => {
           const I = Icon as typeof Truck;
