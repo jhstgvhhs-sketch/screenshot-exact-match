@@ -1,0 +1,87 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { productImage, productQuery } from "@/lib/catalog";
+import { useCart } from "@/lib/cart";
+import { brl, lookupCep, maskCep, SHIPPING_FLAT, type CepAddress } from "@/lib/store";
+
+export const Route = createFileRoute("/produto/$slug")({
+  head: () => ({
+    meta: [
+      { title: "Produto — 3DFLEX" },
+      { name: "description", content: "Detalhes do produto 3DFLEX." },
+      { property: "og:title", content: "Produto — 3DFLEX" },
+      { property: "og:description", content: "Detalhes do produto 3DFLEX." },
+    ],
+  }),
+  component: ProdutoPage,
+});
+
+function ProdutoPage() {
+  const { slug } = Route.useParams();
+  const { data: p, isLoading } = useQuery(productQuery(slug));
+  const cart = useCart();
+  const nav = useNavigate();
+  const [vid, setVid] = useState<string>();
+  const [qty, setQty] = useState(1);
+  const [cep, setCep] = useState("");
+  const [addr, setAddr] = useState<CepAddress | null>(null);
+
+  if (isLoading) return <p className="container-x py-10">Carregando...</p>;
+  if (!p) return <p className="container-x py-10">Produto não encontrado.</p>;
+  const v = p.product_variants.find((x) => x.id === vid);
+
+  const add = (go: boolean) => {
+    if (!v) return toast.error("Selecione uma cor");
+    if (v.stock < qty) return toast.error("Sem estoque suficiente para essa cor");
+    cart.add({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, image: productImage(p), quantity: qty });
+    if (go) nav({ to: "/carrinho" });
+    else toast.success("Adicionado ao carrinho");
+  };
+
+  return (
+    <section className="container-x grid gap-10 py-10 md:grid-cols-2">
+      <img src={productImage(p)} alt={p.name} width={800} height={800} className="aspect-square w-full rounded-xl border border-border object-cover" />
+      <div className="space-y-5">
+        <p className="text-xs font-bold uppercase tracking-wider text-primary">{p.brand}</p>
+        <h1 className="text-3xl font-bold">{p.name}</h1>
+        <p className="font-display text-3xl font-bold">{brl(p.price)}</p>
+        <p className="text-muted-foreground">{p.description}</p>
+        <dl className="grid grid-cols-3 gap-2 text-sm">
+          {[["Material", p.material], ["Peso", p.weight], ["Diâmetro", p.diameter]].map(([k, val]) => (
+            <div key={k} className="rounded-lg bg-card p-3"><dt className="text-muted-foreground">{k}</dt><dd className="font-semibold">{val ?? "—"}</dd></div>
+          ))}
+        </dl>
+        <div>
+          <p className="mb-2 text-sm font-semibold">Cor: {v?.color ?? "selecione"}</p>
+          <div className="flex flex-wrap gap-2">
+            {p.product_variants.map((x) => (
+              <button key={x.id} onClick={() => setVid(x.id)} title={x.color} aria-label={x.color}
+                className={`size-9 rounded-full border-2 ${vid === x.id ? "border-primary" : "border-border"} ${x.stock === 0 ? "opacity-40" : ""}`}
+                style={{ background: x.color_hex ?? undefined }} />
+            ))}
+          </div>
+          {v && <p className="mt-2 text-sm text-muted-foreground">{v.stock > 0 ? `${v.stock} em estoque` : "Indisponível no momento"} · SKU {v.sku}</p>}
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm">Qtd.</label>
+          <input type="number" min={1} max={99} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value)))} className="h-10 w-20 rounded-lg border border-input bg-card px-3" />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" size="xl" onClick={() => add(false)}>Adicionar ao carrinho</Button>
+          <Button variant="buy" size="xl" onClick={() => add(true)}>Comprar agora</Button>
+        </div>
+        <form className="rounded-xl border border-border bg-card p-4" onSubmit={async (e) => { e.preventDefault(); try { setAddr(await lookupCep(cep)); } catch (err) { toast.error((err as Error).message); } }}>
+          <p className="mb-2 text-sm font-semibold">Calcular frete</p>
+          <div className="flex gap-2">
+            <input value={cep} onChange={(e) => setCep(maskCep(e.target.value))} placeholder="00000-000" aria-label="CEP" className="h-10 flex-1 rounded-lg border border-input bg-background px-3" />
+            <Button type="submit">Calcular</Button>
+          </div>
+          {addr && <p className="mt-3 text-sm">{addr.street}, {addr.district} — {addr.city}/{addr.state}<br /><b>Frete: {brl(SHIPPING_FLAT)}</b></p>}
+        </form>
+      </div>
+    </section>
+  );
+}
