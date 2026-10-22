@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ProductReviews } from "@/components/site/ProductReviews";
 import { productImage, productQuery } from "@/lib/catalog";
 import { quantityLimit } from "@/lib/cart-stock";
 import { useCart } from "@/lib/cart";
@@ -49,7 +50,7 @@ function ProdutoPage() {
   };
 
   return (
-    <section className="container-x grid gap-10 py-10 md:grid-cols-2">
+    <><section className="container-x grid gap-10 py-10 md:grid-cols-2">
       <img src={selectedImage} alt={v ? `${p.name} — ${v.color}` : p.name} width={800} height={800} className="aspect-square w-full rounded-xl border border-border object-cover" />
       <div className="space-y-5">
         <p className="text-xs font-bold uppercase tracking-wider text-primary">{p.brand}</p>
@@ -90,6 +91,6 @@ function ProdutoPage() {
           {addr && <p className="mt-3 text-sm">{addr.street}, {addr.district} — {addr.city}/{addr.state}<br /><span className="text-muted-foreground">Frete fixo: {brl(FIXED_SHIPPING_BRL)} para todo o Brasil.</span></p>}
         </form>
       </div>
-    </section>
+    </section><ProductReviews productId={p.id} /></>
   );
 }
