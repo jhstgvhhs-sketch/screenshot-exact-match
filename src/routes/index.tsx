@@ -4,7 +4,7 @@ import { Truck, ShieldCheck, CreditCard, MapPin, ArrowRight } from "lucide-react
 import hero from "@/assets/hero.jpg";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/site/ProductCard";
-import { productsQuery } from "@/lib/catalog";
+import { productsQuery, categoriesQuery } from "@/lib/catalog";
 import { brl, SHIPPING_FLAT } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
@@ -19,11 +19,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const categories = [
-  { slug: "pla", name: "PLA", text: "Fácil de imprimir, ótimo acabamento." },
-  { slug: "petg", name: "PETG", text: "Resistência e durabilidade." },
-  { slug: "acessorios", name: "Acessórios", text: "Sílica, embalagens a vácuo e mais." },
-];
+
 
 const tips = [
   ["Guarde o filamento seco", "Filamentos absorvem umidade do ar. Use embalagens a vácuo com sílica em gel entre impressões."],
@@ -33,6 +29,7 @@ const tips = [
 
 function Index() {
   const { data: products = [] } = useQuery(productsQuery());
+  const { data: categories = [] } = useQuery(categoriesQuery());
   const featured = products.filter((p) => p.featured);
 
   return (
@@ -59,7 +56,7 @@ function Index() {
             <Link key={c.slug} to="/produtos" search={{ categoria: c.slug }} className="group relative overflow-hidden rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/60">
               <div className="absolute inset-0 bg-gradient-hero opacity-0 transition-opacity group-hover:opacity-100" />
               <p className="relative font-display text-3xl font-extrabold">{c.name}</p>
-              <p className="relative mt-1 text-sm text-muted-foreground">{c.text}</p>
+              <p className="relative mt-1 text-sm text-muted-foreground">{c.description ?? "Confira os produtos desta categoria."}</p>
               <ArrowRight className="relative mt-6 text-primary transition-transform group-hover:translate-x-1" />
             </Link>
           ))}
