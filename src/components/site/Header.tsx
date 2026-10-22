@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Search, ShoppingCart, User, Package, Menu, X, Shield } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X, Shield } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
@@ -54,7 +54,6 @@ export function Header() {
             <Link to="/admin" aria-label="Painel" className="rounded-lg p-2 text-primary hover:bg-accent"><Shield className="size-5" /></Link>
           )}
           <Link to="/conta" aria-label="Minha conta" className="rounded-lg p-2 hover:bg-accent"><User className="size-5" /></Link>
-          <Link to="/conta" search={{ aba: "pedidos" }} aria-label="Meus pedidos" className="hidden rounded-lg p-2 hover:bg-accent sm:block"><Package className="size-5" /></Link>
           <Link to="/carrinho" aria-label="Carrinho" className="relative rounded-lg p-2 hover:bg-accent">
             <ShoppingCart className="size-5" />
             {count > 0 && (
@@ -71,7 +70,7 @@ export function Header() {
           {cats.map((c) => (
             <Link key={c.slug} to="/produtos" search={{ categoria: c.slug }} onClick={() => setOpen(false)} className="block font-semibold">{c.label}</Link>
           ))}
-          <Link to="/conta" search={{ aba: "pedidos" }} onClick={() => setOpen(false)} className="block font-semibold">Meus pedidos</Link>
+          <Link to="/conta" onClick={() => setOpen(false)} className="block font-semibold">Minha conta</Link>
         </div>
       )}
     </header>
