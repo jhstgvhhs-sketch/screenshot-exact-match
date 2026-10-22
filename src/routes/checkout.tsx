@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
-import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
+import { shippingForOrder } from "@/lib/shipping";
 import { cardWhatsAppUrl } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -86,6 +86,7 @@ function Checkout() {
 
   if (!items.length) return <section className="container-x py-12"><h1 className="text-3xl font-bold">Finalizar compra</h1><p className="mt-4 text-muted-foreground">Seu carrinho está vazio.</p><Link className="mt-5 inline-block text-primary underline" to="/produtos">Explorar produtos</Link></section>;
 
+  const shipping = shippingForOrder(subtotal, payment === "pix" ? "pix" : "card");
   const fieldClass = "w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   return <section className="container-x py-10">
     <h1 className="text-3xl font-bold">{step === "details" ? "Dados de entrega" : "Pagamento"}</h1>
@@ -137,7 +138,7 @@ function Checkout() {
       <aside className="h-fit space-y-4 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-24">
         <h2 className="text-lg font-bold">Resumo do pedido</h2>
         <ul className="space-y-3 text-sm">{items.map(item => <li key={item.variantId} className="flex justify-between gap-3"><span>{item.name} — {item.color} × {item.quantity}</span><span className="shrink-0">{brl(item.price * item.quantity)}</span></li>)}</ul>
-        <div className="space-y-2 border-t border-border pt-3 text-sm"><div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div><div className="flex justify-between"><span>Frete fixo</span><span>{brl(FIXED_SHIPPING_BRL)}</span></div><div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span>Total</span><span>{brl(subtotal + FIXED_SHIPPING_BRL)}</span></div></div>
+        <p className="text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix.</p><div className="space-y-2 border-t border-border pt-3 text-sm"><div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div><div className="flex justify-between"><span>Frete fixo</span><span>{brl(shipping)}</span></div><div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span>Total</span><span>{brl(subtotal + shipping)}</span></div></div>
         <Link to="/carrinho" className="inline-block text-sm text-primary underline">Voltar ao carrinho</Link>
       </aside>
     </div>
