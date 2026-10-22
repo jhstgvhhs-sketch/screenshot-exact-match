@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { productImage, productQuery } from "@/lib/catalog";
+import { quantityLimit } from "@/lib/cart-stock";
 import { useCart } from "@/lib/cart";
 import { brl, lookupCep, maskCep, type CepAddress } from "@/lib/store";
 import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
@@ -34,10 +35,13 @@ function ProdutoPage() {
   if (!p) return <p className="container-x py-10">Produto não encontrado.</p>;
   const v = p.product_variants.find((x) => x.id === vid);
 
+  const limit = v ? quantityLimit({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, quantity: 1, stock: v.stock }) : 1;
+  const inCart = cart.items.find(i => i.variantId === v?.id)?.quantity ?? 0;
+  const available = Math.max(0, limit - inCart);
   const add = (go: boolean) => {
-    if (!v) return toast.error("Selecione uma cor");
-    if (v.stock < qty) return toast.error("Sem estoque suficiente para essa cor");
-    cart.add({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, image: productImage(p), quantity: qty });
+    if (!v) { toast.error("Selecione uma cor"); return; }
+    if (available < qty) { toast.error("Limite de estoque dessa cor atingido no carrinho"); return; }
+    cart.add({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, image: productImage(p), quantity: qty, stock: v.stock });
     if (go) nav({ to: "/carrinho" });
     else toast.success("Adicionado ao carrinho");
   };
@@ -59,7 +63,7 @@ function ProdutoPage() {
           <p className="mb-2 text-sm font-semibold">Cor: {v?.color ?? "selecione"}</p>
           <div className="flex flex-wrap gap-2">
             {p.product_variants.map((x) => (
-              <button key={x.id} onClick={() => setVid(x.id)} title={x.color} aria-label={x.color}
+              <button key={x.id} onClick={() => { setVid(x.id); setQty(1); }} title={x.color} aria-label={x.color}
                 className={`size-9 rounded-full border-2 ${vid === x.id ? "border-primary" : "border-border"} ${x.stock === 0 ? "opacity-40" : ""}`}
                 style={{ background: x.color_hex ?? undefined }} />
             ))}
@@ -68,11 +72,12 @@ function ProdutoPage() {
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm">Qtd.</label>
-          <input type="number" min={1} max={99} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value)))} className="h-10 w-20 rounded-lg border border-input bg-card px-3" />
+          <input type="number" min={1} max={Math.max(1, available)} value={Math.min(qty, Math.max(1, available))} aria-label="Quantidade" disabled={available === 0} onChange={(e) => setQty(Math.max(1, Math.min(Math.max(1, available), Math.floor(Number(e.target.value)) || 1)))} className="h-10 w-20 rounded-lg border border-input bg-card px-3" />
         </div>
+        {v && inCart > 0 && <p role="status" className="text-sm text-muted-foreground">{inCart} unidade(s) dessa cor no carrinho.</p>}
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="xl" onClick={() => add(false)}>Adicionar ao carrinho</Button>
-          <Button variant="buy" size="xl" onClick={() => add(true)}>Comprar agora</Button>
+          <Button variant="outline" size="xl" disabled={!!v && available === 0} onClick={() => add(false)}>Adicionar ao carrinho</Button>
+          <Button variant="buy" size="xl" disabled={!!v && available === 0} onClick={() => add(true)}>Comprar agora</Button>
         </div>
         <form className="rounded-xl border border-border bg-card p-4" onSubmit={async (e) => { e.preventDefault(); try { setAddr(await lookupCep(cep)); } catch (err) { toast.error((err as Error).message); } }}>
           <p className="mb-2 text-sm font-semibold">Consultar endereço pelo CEP</p>

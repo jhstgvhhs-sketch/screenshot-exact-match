@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
+import { quantityLimit } from "@/lib/cart-stock";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
 import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
@@ -28,7 +29,7 @@ function Carrinho() {
               <li key={i.variantId} className="flex items-center gap-4 rounded-xl border border-border bg-card p-3">
                 <img src={i.image} alt="" width={64} height={64} className="size-16 rounded-lg object-cover" />
                 <div className="flex-1"><p className="font-semibold">{i.name}</p><p className="text-sm text-muted-foreground">{i.color} · {brl(i.price)}</p></div>
-                <input type="number" min={1} max={99} value={i.quantity} aria-label="Quantidade" onChange={(e) => setQty(i.variantId, Number(e.target.value))} className="h-9 w-16 rounded-lg border border-input bg-background px-2" />
+                <input type="number" min={1} max={quantityLimit(i)} value={i.quantity} aria-label="Quantidade" onChange={(e) => setQty(i.variantId, Number(e.target.value))} className="h-9 w-16 rounded-lg border border-input bg-background px-2" />
                 <button aria-label="Remover" onClick={() => remove(i.variantId)}><Trash2 className="size-4 text-muted-foreground" /></button>
               </li>
             ))}
