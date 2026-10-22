@@ -20,6 +20,7 @@ export const Route = createFileRoute("/carrinho")({
 function Carrinho() {
   const { items, setQty, remove, subtotal } = useCart();
   const eligibleForFreePixShipping = subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL;
+  const remainingForFreeShipping = Math.max(0, Math.round((FREE_PIX_SHIPPING_THRESHOLD_BRL - subtotal) * 100 + 1) / 100);
   return (
     <section className="container-x py-10">
       <h1 className="text-3xl font-bold">Carrinho</h1>
@@ -36,6 +37,8 @@ function Carrinho() {
             ))}
           </ul>
           <aside className="h-fit space-y-2 rounded-xl border border-border bg-card p-5 text-sm">
+            {!eligibleForFreePixShipping && <p role="status" className="rounded-lg border border-primary/40 bg-primary/10 p-3 font-semibold text-foreground">Faltam apenas {brl(remainingForFreeShipping)} para ganhar frete grátis no Pix!</p>}
+            {eligibleForFreePixShipping && <p role="status" className="rounded-lg border border-green-600/40 bg-green-600/10 p-3 font-semibold text-green-600">Parabéns! Você ganhou frete grátis no Pix!</p>}
             <div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div>
             <div className="flex justify-between"><span>Frete no Pix</span><span>{eligibleForFreePixShipping ? <span className="font-bold text-green-600">GRÁTIS</span> : brl(FIXED_SHIPPING_BRL)}</span></div>
             {eligibleForFreePixShipping && <div className="flex justify-between text-green-600"><span>Desconto no frete (Pix)</span><span>-{brl(FIXED_SHIPPING_BRL)}</span></div>}
