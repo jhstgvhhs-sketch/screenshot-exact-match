@@ -19,6 +19,9 @@ function Checkout() {
   const [step, setStep] = useState<"details" | "payment">("details");
   const [deliveryData, setDeliveryData] = useState<FormData | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+  const [cardLoading, setCardLoading] = useState(false);
+  const [cardOrderId, setCardOrderId] = useState<string | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
   const [validated, setValidated] = useState(false);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
@@ -42,6 +45,34 @@ function Checkout() {
     } catch (error) {
       setPixError(error instanceof Error ? error.message : "Erro ao iniciar pagamento.");
     } finally { setPixLoading(false); }
+  }
+
+  async function beginCard() {
+    if (!deliveryData || cardLoading || cardOrderId) return;
+    setCardLoading(true);
+    setCardError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Entre na sua conta para registrar o pedido.");
+      const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
+      if (customer.email?.toLowerCase() !== user.email?.toLowerCase())
+        throw new Error("Utilize no pedido o mesmo e-mail da sua conta.");
+      const { data, error } = await supabase.rpc("place_order", {
+        _items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })),
+        _customer: customer,
+        _coupon: null,
+        _method: "cartao",
+      });
+      if (error) throw error;
+      if (!data) throw new Error("O pedido não foi confirmado pelo banco.");
+      setCardOrderId(data);
+      setWhatsappUrl(cardWhatsAppUrl(items, subtotal, deliveryData));
+      setValidated(true);
+    } catch (error) {
+      setCardError(error instanceof Error ? error.message : "Não foi possível registrar o pedido.");
+    } finally {
+      setCardLoading(false);
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -95,10 +126,11 @@ function Checkout() {
             <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Continue pelo atendimento para combinar o pagamento.</span></span>
           </label>
         </fieldset>
-        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } setWhatsappUrl(deliveryData ? cardWhatsAppUrl(items, subtotal, deliveryData) : null); setValidated(true); }} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground">{pixLoading ? "Preparando Pix..." : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}`}</button>
+        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } void beginCard(); }} disabled={pixLoading || cardLoading || (payment === "card" && !!cardOrderId)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
+        {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
         {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
         {pixData && payment === "pix" && <div className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="font-bold">Pagamento Pix — pedido {pixData.orderId}</h2>{pixData.qrCodeBase64 && <img className="mx-auto h-56 w-56 object-contain" alt="QR Code Pix" src={pixData.qrCodeBase64.startsWith("data:") ? pixData.qrCodeBase64 : `data:image/png;base64,${pixData.qrCodeBase64}`} />}<label className="block text-sm">Pix copia e cola<textarea className="mt-2 w-full rounded-lg border bg-background p-3" readOnly rows={3} value={pixData.copyPaste}/></label><button type="button" className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={() => void navigator.clipboard.writeText(pixData.copyPaste)}>Copiar código Pix</button><p className="text-sm text-muted-foreground">Aguarde a confirmação do pagamento. Não faça um novo pedido enquanto este estiver pendente.</p></div>}
-        {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">{payment === "pix" ? "O Pix ainda não está disponível para cobrança online. Nenhum pedido foi criado ou cobrado." : whatsappUrl ? "Continue pelo WhatsApp para solicitar o pagamento por cartão. Nenhum pedido foi criado ou cobrado." : "Atendimento por WhatsApp ainda não configurado. Nenhum pedido foi criado ou cobrado."}</p>}
+        {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">{payment === "pix" ? "O Pix ainda não está disponível para cobrança online. Nenhum pedido foi criado ou cobrado." : whatsappUrl ? `Pedido ${cardOrderId?.slice(0,8).toUpperCase()} registrado como pagamento pendente. Continue no WhatsApp. A loja só marcará como pago após confirmação manual.` : "Atendimento por WhatsApp ainda não configurado. Nenhum pedido foi criado ou cobrado."}</p>}
         {validated && whatsappUrl && payment === "card" && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
         <button type="button" onClick={() => { setStep("details"); setValidated(false); setWhatsappUrl(null); }} className="text-sm font-semibold text-primary underline">Voltar aos dados de entrega</button>
       </div>}
