@@ -43,7 +43,7 @@ function ProdutoPage() {
   const available = Math.max(0, limit - inCart);
   const add = (go: boolean) => {
     if (!v) { toast.error("Selecione uma cor"); return; }
-    if (available < qty) { toast.error("Limite de estoque dessa cor atingido no carrinho"); return; }
+    if (available < qty) { toast.error("Quantidade máxima disponível para essa cor atingida"); return; }
     cart.add({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, image: selectedImage, quantity: qty, stock: v.stock });
     if (go) nav({ to: "/carrinho" });
     else toast.success("Adicionado ao carrinho");
