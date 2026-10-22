@@ -41,7 +41,7 @@ export function CustomerOrderAdmin() {
   </section>
   <section className="rounded-xl border border-border bg-card p-5">
    <h2 className="text-xl font-bold">Gestão de pedidos</h2>
-   <p className="mt-2 text-sm text-muted-foreground">Exibe somente pedidos existentes no banco. O checkout atual ainda não gera pedidos nem confirma pagamentos automaticamente.</p>
+   <p className="mt-2 text-sm text-muted-foreground">Exibe os pedidos registrados no banco. Pedidos por cartão aguardam confirmação manual do recebimento; o Pix depende da integração com o gateway.</p>
    <div className="mt-4 grid gap-3 sm:grid-cols-3">
     <div className="rounded-lg border border-border p-3"><p className="text-sm text-muted-foreground">Pedidos registrados</p><p className="text-2xl font-bold">{orders.data?.length??"—"}</p></div>
     <div className="rounded-lg border border-border p-3"><p className="text-sm text-muted-foreground">Marcados como pagos</p><p className="text-2xl font-bold">{paid.length}</p></div>
