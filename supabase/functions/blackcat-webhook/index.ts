@@ -14,30 +14,19 @@ Deno.serve(async(req)=>{
   if(error||!payment)return json({error:"Unknown transaction"},404);
   const status=await consultBlackcatPix(transactionId);
   if(status.transactionId!==transactionId||Number(status.amount)!==payment.amount_cents)return json({error:"Gateway amount mismatch"},409);
-  const next=String(status.status).toUpperCase()==="PAID"?"paid":String(status.status).toUpperCase()==="REFUNDED"?"refunded":String(status.status).toUpperCase()==="CANCELLED"?"cancelled":"pending";
-  if(next==="paid"&&payment.status!=="paid") {
-    const {data:confirmed,error:orderError}=await admin.from("orders")
-      .update({payment_status:"pago",status:"pagamento_confirmado"})
-      .eq("id",payment.order_id).eq("payment_status","pendente")
-      .eq("status","aguardando_pagamento").select("id");
-    if(orderError)return json({error:"Failed to update order"},500);
-    if(!confirmed?.length)return json({error:"Payment requires manual reconciliation; order no longer pending"},409);
-    const {error:updateError}=await admin.from("pix_transactions")
-      .update({status:"paid"}).eq("order_id",payment.order_id).eq("status","pending");
-    if(updateError)return json({error:"Failed to persist payment"},500);
-  } else if(next==="cancelled" && payment.status==="pending"){
-    const {data:released,error:releaseError}=await admin.rpc("release_unpaid_order_stock",{p_order_id:payment.order_id,p_payment_status:"cancelado"});
-    if(releaseError)return json({error:"Failed to release reserved stock"},500);
-    if(released){
-      const {error:ledgerError}=await admin.from("pix_transactions").update({status:"cancelled"}).eq("order_id",payment.order_id).eq("status","pending");
-      if(ledgerError)return json({error:"Failed to persist cancellation"},500);
-    }
-  } else if(next==="refunded"){
-    // A refund after a completed payment requires separate fulfillment review.
-    // Do not automatically replenish stock for a previously paid order.
-    await admin.from("pix_transactions").update({status:"refunded"}).eq("order_id",payment.order_id).eq("status","paid");
+  const rawStatus=String(status.status).toUpperCase();
+  const next=rawStatus==="PAID"||rawStatus==="APPROVED"?"paid":
+    rawStatus==="CANCELLED"||rawStatus==="CANCELED"?"cancelled":
+    rawStatus==="EXPIRED"?"expired":null;
+  if(!next)return json({ok:true,ignored:true});
+  const {data:result,error:settleError}=await admin.rpc("settle_pix_order",{
+    p_order_id:payment.order_id,p_transaction_id:transactionId,
+    p_amount_cents:payment.amount_cents,p_gateway_status:next
+  });
+  if(settleError)return json({error:"Settlement unavailable"},503);
+  if(result==="manual_review"||result==="mismatch"||result==="unknown_order")
+    return json({error:"Payment requires manual reconciliation"},409);
 
-  }
   return json({ok:true});
  }catch{return json({error:"Could not verify gateway status"},503)}
 });
