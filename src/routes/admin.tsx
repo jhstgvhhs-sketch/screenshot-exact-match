@@ -130,7 +130,7 @@ function AdminPage() {
           {!products.length && <p className="p-4 text-muted-foreground">Nenhum produto disponível.</p>}
         </div>
       )}
-      <div className="mt-8 space-y-6">{products.map((p) => <ProductEditor key={p.id} product={p} onSaved={() => void queryClient.invalidateQueries({ queryKey: ["products"] })} />)}</div>
+      <div className="mt-8 space-y-6">{products.map((p) => <ProductEditor key={p.id} product={p} onSaved={refreshCatalog} />)}</div>
     </section>
   );
 }
@@ -177,6 +177,7 @@ function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => 
     </label>)}</div>
     {feedback && <p role="status" className="mt-4 text-sm">{feedback}</p>}
     <button disabled={saving} type="submit" className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{saving ? "Salvando..." : "Salvar preço e estoque"}</button>
+    <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
   </form>;
 }
 
@@ -286,5 +287,47 @@ function DraftProductEditor({ product, onSaved }: {
       <button type="button" disabled={busy} onClick={() => void save(false)} className="rounded-lg border border-input px-5 py-3 font-semibold disabled:opacity-50">{busy ? "Aguarde..." : "Salvar fotos"}</button>
       <button type="button" disabled={busy} onClick={() => void save(true)} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">Publicar produto</button>
     </div>
+    <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
+  </div>;
+}
+
+function DeleteProductButton({ id, name, onDeleted }: { id: string; name: string; onDeleted: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  async function remove() {
+    if (typed.trim() !== name) return;
+    setDeleting(true); setErrorMessage("");
+    try {
+      // Preserve order history: reject removal when any order item references a variant.
+      const { data: variants, error: variantsError } = await supabase.from("product_variants").select("id").eq("product_id", id);
+      if (variantsError) throw variantsError;
+      if (variants?.length) {
+        const { data: items, error: itemsError } = await supabase.from("order_items").select("id").in("variant_id", variants.map(v => v.id)).limit(1);
+        if (itemsError) throw itemsError;
+        if (items?.length) throw new Error("Este produto já possui itens em pedidos e não pode ser excluído. Desative-o para preservar o histórico.");
+      }
+      // Deleting the parent is safe only when the database's FK policy permits it.
+      const { data, error } = await supabase.from("products").delete().eq("id", id).select("id").single();
+      if (error) throw error;
+      if (!data) throw new Error("O banco não confirmou a exclusão.");
+      setConfirming(false); setTyped("");
+      onDeleted();
+    } catch (err) {
+      setErrorMessage((err instanceof Error ? err.message : "Falha ao excluir.") + " Se o banco bloquear por vínculos de cores, será necessária uma exclusão transacional segura no Lovable Cloud.");
+    } finally { setDeleting(false); }
+  }
+  return <div className="mt-6 border-t border-border pt-4">
+    {!confirming ? <button type="button" onClick={() => setConfirming(true)} className="rounded-lg border border-destructive px-4 py-2 text-sm font-semibold text-destructive">Excluir produto</button> : <div className="space-y-3">
+      <p className="text-sm font-semibold text-destructive">Exclusão permanente. Digite o nome completo do produto para confirmar:</p>
+      <p className="break-words text-sm">{name}</p>
+      <input aria-label="Confirme o nome do produto" value={typed} onChange={e => setTyped(e.target.value)} className="w-full rounded-lg border border-input bg-background p-3" />
+      <div className="flex flex-wrap gap-3">
+        <button type="button" disabled={deleting || typed.trim() !== name} onClick={() => void remove()} className="rounded-lg bg-destructive px-4 py-2 font-bold text-destructive-foreground disabled:opacity-50">{deleting ? "Excluindo..." : "Excluir permanentemente"}</button>
+        <button type="button" disabled={deleting} onClick={() => { setConfirming(false); setTyped(""); setErrorMessage(""); }} className="rounded-lg border border-input px-4 py-2">Cancelar</button>
+      </div>
+    </div>}
+    {errorMessage && <p role="alert" className="mt-3 text-sm text-destructive">{errorMessage}</p>}
   </div>;
 }
