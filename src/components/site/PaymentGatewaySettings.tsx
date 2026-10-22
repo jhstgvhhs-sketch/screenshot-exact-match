@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 type GatewayConfig = { id: string; provider: string; environment: string; pix_enabled: boolean; updated_at?: string };
 const gatewayTable = () => (supabase as unknown as { from: (table: string) => any }).from("payment_gateway_settings");
-const options = [{value:"none",label:"Nenhum (pagamento online desativado)"},{value:"mercadopago",label:"Mercado Pago"},{value:"asaas",label:"Asaas"},{value:"custom",label:"Outro gateway (requer adaptador de API)"}];
+const options = [{value:"none",label:"Nenhum (pagamento online desativado)"},{value:"blackcat",label:"Blackcat Pay"},{value:"mercadopago",label:"Mercado Pago"},{value:"asaas",label:"Asaas"},{value:"custom",label:"Outro gateway (requer adaptador de API)"}];
 export function PaymentGatewaySettings() {
  const client=useQueryClient();
  const query=useQuery<GatewayConfig>({queryKey:["admin-payment-gateway"],queryFn:async()=>{const {data,error}=await gatewayTable().select("id,provider,environment,pix_enabled,updated_at").eq("id","main").maybeSingle();if(error)throw error;return data??{id:"main",provider:"none",environment:"sandbox",pix_enabled:false};}});
