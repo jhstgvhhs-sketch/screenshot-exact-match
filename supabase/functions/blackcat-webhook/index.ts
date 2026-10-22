@@ -20,9 +20,18 @@ Deno.serve(async(req)=>{
     if(updateError)return json({error:"Failed to persist payment"},500);
     const {error:orderError}=await admin.from("orders").update({payment_status:"pago",status:"pagamento_confirmado"}).eq("id",payment.order_id).eq("payment_status","pendente");
     if(orderError)return json({error:"Failed to update order"},500);
-  } else if(next==="cancelled"||next==="refunded"){
-    await admin.from("pix_transactions").update({status:next}).eq("order_id",payment.order_id);
-    await admin.from("orders").update({payment_status:next==="cancelled"?"cancelado":"estornado"}).eq("id",payment.order_id).neq("payment_status",next);
+  } else if(next==="cancelled" && payment.status==="pending"){
+    const {data:released,error:releaseError}=await admin.rpc("release_unpaid_order_stock",{p_order_id:payment.order_id,p_payment_status:"cancelado"});
+    if(releaseError)return json({error:"Failed to release reserved stock"},500);
+    if(released){
+      const {error:ledgerError}=await admin.from("pix_transactions").update({status:"cancelled"}).eq("order_id",payment.order_id).eq("status","pending");
+      if(ledgerError)return json({error:"Failed to persist cancellation"},500);
+    }
+  } else if(next==="refunded"){
+    // A refund after a completed payment requires separate fulfillment review.
+    // Do not automatically replenish stock for a previously paid order.
+    await admin.from("pix_transactions").update({status:"refunded"}).eq("order_id",payment.order_id).eq("status","paid");
+
   }
   return json({ok:true});
  }catch{return json({error:"Could not verify gateway status"},503)}
