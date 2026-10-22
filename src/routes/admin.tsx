@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Product } from "@/lib/catalog";
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   const { user, isAdmin, loading } = useAuth();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -95,6 +97,7 @@ function AdminPage() {
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Unidades em estoque</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + totalStock(p), 0)}</p></div>
       </div>
       <h2 className="mt-10 text-xl font-bold">Catálogo</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Edite o preço e o estoque de cada cor. As alterações são gravadas no banco da loja somente quando você clicar em Salvar.</p>
       {productsLoading ? <p className="mt-4">Carregando produtos...</p> : (
         <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-left text-sm">
@@ -108,6 +111,52 @@ function AdminPage() {
           {!products.length && <p className="p-4 text-muted-foreground">Nenhum produto disponível.</p>}
         </div>
       )}
+      <div className="mt-8 space-y-6">{products.map((p) => <ProductEditor key={p.id} product={p} onSaved={() => void queryClient.invalidateQueries({ queryKey: ["products"] })} />)}</div>
     </section>
   );
+}
+
+function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => void }) {
+  const [price, setPrice] = useState(String(product.price));
+  const [stocks, setStocks] = useState<Record<string, string>>(() => Object.fromEntries(product.product_variants.map(v => [v.id, String(v.stock)])));
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const parsedPrice = Number(price.replace(",", "."));
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0 || !/^\\d+([.,]\\d{1,2})?$/.test(price.trim())) { setFeedback("Informe um preço válido, com até duas casas decimais."); return; }
+    const changes = product.product_variants.filter(v => Number(stocks[v.id]) !== v.stock);
+    if (changes.some(v => !/^\\d+$/.test(stocks[v.id] ?? "") || !Number.isSafeInteger(Number(stocks[v.id])))) { setFeedback("O estoque deve ser um número inteiro não negativo."); return; }
+    setSaving(true);
+    setFeedback("");
+    try {
+      if (parsedPrice !== product.price) {
+        const { data, error } = await supabase.from("products").update({ price: parsedPrice }).eq("id", product.id).select("id").single();
+        if (error) throw error;
+        if (!data) throw new Error("O banco não confirmou a atualização do preço.");
+      }
+      for (const v of changes) {
+        const { data, error } = await supabase.from("product_variants").update({ stock: Number(stocks[v.id]) }).eq("id", v.id).eq("product_id", product.id).select("id").single();
+        if (error) throw error;
+        if (!data) throw new Error("O banco não confirmou a atualização de " + v.color);
+      }
+      setFeedback("Alterações salvas no banco da loja.");
+      onSaved();
+    } catch (error) {
+      setFeedback((error instanceof Error ? error.message : "Erro ao salvar.") + " Verifique as permissões de edição do Lovable Cloud.");
+      onSaved();
+    } finally { setSaving(false); }
+  }
+  return <form onSubmit={save} className="rounded-xl border border-border bg-card p-5">
+    <h3 className="text-lg font-bold">{product.name}</h3>
+    <label className="mt-4 block max-w-xs text-sm font-semibold">Preço (R$)
+      <input required inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" />
+    </label>
+    <h4 className="mt-6 font-semibold">Estoque por cor</h4>
+    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{product.product_variants.map(v => <label key={v.id} className="text-sm">{v.color}
+      <input type="number" min="0" step="1" required value={stocks[v.id] ?? ""} onChange={e => setStocks(prev => ({ ...prev, [v.id]: e.target.value }))} className="mt-1 w-full rounded-lg border border-input bg-background p-2" />
+    </label>)}</div>
+    {feedback && <p role="status" className="mt-4 text-sm">{feedback}</p>}
+    <button disabled={saving} type="submit" className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{saving ? "Salvando..." : "Salvar preço e estoque"}</button>
+  </form>;
 }
