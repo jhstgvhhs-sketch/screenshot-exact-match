@@ -71,7 +71,7 @@ function ProdutoPage() {
                 style={{ background: x.color_hex ?? undefined }} />
             ))}
           </div>
-          {v && <p className="mt-2 text-sm text-muted-foreground">{v.stock > 0 ? `${v.stock} em estoque` : "Indisponível no momento"} · SKU {v.sku}</p>}
+          {v && <p className="mt-2 text-sm text-muted-foreground">{v.stock > 0 ? "Disponível" : "Indisponível no momento"}</p>}
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm">Qtd.</label>
