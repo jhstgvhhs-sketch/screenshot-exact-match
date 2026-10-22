@@ -18,11 +18,11 @@ Deno.serve(async(req)=>{
   if(next==="paid"&&payment.status!=="paid") {
     const {error:updateError}=await admin.from("pix_transactions").update({status:"paid"}).eq("order_id",payment.order_id).eq("status","pending");
     if(updateError)return json({error:"Failed to persist payment"},500);
-    const {error:orderError}=await admin.from("orders").update({payment_status:"paid",status:"paid"}).eq("id",payment.order_id).eq("payment_status","pending");
+    const {error:orderError}=await admin.from("orders").update({payment_status:"pago",status:"pagamento_confirmado"}).eq("id",payment.order_id).eq("payment_status","pendente");
     if(orderError)return json({error:"Failed to update order"},500);
   } else if(next==="cancelled"||next==="refunded"){
     await admin.from("pix_transactions").update({status:next}).eq("order_id",payment.order_id);
-    await admin.from("orders").update({payment_status:next}).eq("id",payment.order_id).neq("payment_status",next);
+    await admin.from("orders").update({payment_status:next==="cancelled"?"cancelado":"estornado"}).eq("id",payment.order_id).neq("payment_status",next);
   }
   return json({ok:true});
  }catch{return json({error:"Could not verify gateway status"},503)}
