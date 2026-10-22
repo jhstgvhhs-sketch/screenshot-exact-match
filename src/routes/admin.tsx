@@ -135,49 +135,109 @@ function AdminPage() {
   );
 }
 
+
 function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => void }) {
-  const [price, setPrice] = useState(String(product.price));
-  const [stocks, setStocks] = useState<Record<string, string>>(() => Object.fromEntries(product.product_variants.map(v => [v.id, String(v.stock)])));
+  const [editing, setEditing] = useState(false);
+  return <div className="rounded-xl border border-border bg-card p-5">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <h3 className="text-lg font-bold">{product.name}</h3>
+      <button type="button" onClick={() => setEditing(x => !x)} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary">{editing ? "Fechar edição" : "Editar produto"}</button>
+    </div>
+    {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />}
+    <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
+  </div>;
+}
+
+type EditableProduct = {
+  id: string; name: string; slug: string; brand: string | null; material: string | null;
+  weight: string | null; diameter: string | null; description: string | null;
+  price: number; images: string[];
+  product_variants: { id: string; color: string; color_hex: string | null; sku: string; stock: number; sort: number }[];
+};
+
+function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onSaved: () => void }) {
+  const variants = [...product.product_variants].sort((a,b) => a.sort - b.sort);
+  const [fields, setFields] = useState({
+    name: product.name, slug: product.slug, brand: product.brand ?? "",
+    material: product.material ?? "", weight: product.weight ?? "", diameter: product.diameter ?? "",
+    description: product.description ?? "", price: String(product.price),
+  });
+  const [images, setImages] = useState<string[]>(() => Array.from({ length: variants.length + 1 }, (_, i) => product.images?.[i] ?? ""));
+  const [variantFields, setVariantFields] = useState<Record<string, { color: string; color_hex: string; sku: string; stock: string }>>(
+    () => Object.fromEntries(variants.map(v => [v.id, { color: v.color, color_hex: v.color_hex ?? "", sku: v.sku, stock: String(v.stock) }]))
+  );
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const setField = (key: keyof typeof fields, value: string) => setFields(prev => ({ ...prev, [key]: value }));
+  const setVariant = (id: string, key: "color" | "color_hex" | "sku" | "stock", value: string) =>
+    setVariantFields(prev => ({ ...prev, [id]: { ...prev[id], [key]: value } }));
+  const setImage = (index: number, value: string) => setImages(prev => prev.map((s,i) => i === index ? value : s));
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const parsedPrice = Number(price.replace(",", "."));
-    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0 || !/^\d+([.,]\d{1,2})?$/.test(price.trim())) { setFeedback("Informe um preço válido, com até duas casas decimais."); return; }
-    const changes = product.product_variants.filter(v => Number(stocks[v.id]) !== v.stock);
-    if (changes.some(v => !/^\d+$/.test(stocks[v.id] ?? "") || !Number.isSafeInteger(Number(stocks[v.id])))) { setFeedback("O estoque deve ser um número inteiro não negativo."); return; }
-    setSaving(true);
-    setFeedback("");
+    const price = Number(fields.price.replace(",", "."));
+    if (!fields.name.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fields.slug.trim()) || !/^\d+([.,]\d{1,2})?$/.test(fields.price.trim()) || !Number.isFinite(price) || price <= 0) {
+      setFeedback("Revise o nome, identificador e preço."); return;
+    }
+    if (variants.some(v => !variantFields[v.id].color.trim() || !variantFields[v.id].sku.trim() || !/^\d+$/.test(variantFields[v.id].stock) || !Number.isSafeInteger(Number(variantFields[v.id].stock)))) {
+      setFeedback("Cada cor precisa de nome, SKU e estoque inteiro válido."); return;
+    }
+    const colorNames = variants.map(v => variantFields[v.id].color.trim().toLowerCase());
+    const skus = variants.map(v => variantFields[v.id].sku.trim().toLowerCase());
+    if (new Set(colorNames).size !== colorNames.length || new Set(skus).size !== skus.length) { setFeedback("Cores e SKUs não podem ser repetidos neste produto."); return; }
+    const validImage = (s: string) => { try { return new URL(s).protocol === "https:"; } catch { return false; } };
+    if (images.some(s => s.trim() && !validImage(s.trim()))) { setFeedback("As fotos precisam ter URLs HTTPS válidas."); return; }
+    setSaving(true); setFeedback("");
     try {
-      if (parsedPrice !== product.price) {
-        const { data, error } = await supabase.from("products").update({ price: parsedPrice }).eq("id", product.id).select("id").single();
-        if (error) throw error;
-        if (!data) throw new Error("O banco não confirmou a atualização do preço.");
+      const { data, error } = await supabase.from("products").update({
+        name: fields.name.trim(), slug: fields.slug.trim(), brand: fields.brand.trim() || null,
+        material: fields.material.trim() || null, weight: fields.weight.trim() || null,
+        diameter: fields.diameter.trim() || null, description: fields.description.trim() || null,
+        price, images: images.map(s => s.trim()),
+      }).eq("id", product.id).select("id").single();
+      if (error) throw error;
+      if (!data) throw new Error("O banco não confirmou a edição do produto.");
+      for (const v of variants) {
+        const f = variantFields[v.id];
+        if (f.color !== v.color || f.color_hex !== (v.color_hex ?? "") || f.sku !== v.sku || Number(f.stock) !== v.stock) {
+          const { data: saved, error: variantError } = await supabase.from("product_variants").update({
+            color: f.color.trim(), color_hex: f.color_hex.trim() || null, sku: f.sku.trim(), stock: Number(f.stock),
+          }).eq("id", v.id).eq("product_id", product.id).select("id").single();
+          if (variantError) throw variantError;
+          if (!saved) throw new Error("O banco não confirmou a cor " + v.color);
+        }
       }
-      for (const v of changes) {
-        const { data, error } = await supabase.from("product_variants").update({ stock: Number(stocks[v.id]) }).eq("id", v.id).eq("product_id", product.id).select("id").single();
-        if (error) throw error;
-        if (!data) throw new Error("O banco não confirmou a atualização de " + v.color);
-      }
-      setFeedback("Alterações salvas no banco da loja.");
+      setFeedback("Produto atualizado sem excluir o cadastro ou suas cores.");
       onSaved();
-    } catch (error) {
-      setFeedback((error instanceof Error ? error.message : "Erro ao salvar.") + " Verifique as permissões de edição do Lovable Cloud.");
+    } catch (err) {
+      setFeedback((err instanceof Error ? err.message : "Erro ao editar.") + " Alterações anteriores podem ter sido salvas; atualize a página para conferir.");
       onSaved();
     } finally { setSaving(false); }
   }
-  return <form onSubmit={save} className="rounded-xl border border-border bg-card p-5">
-    <h3 className="text-lg font-bold">{product.name}</h3>
-    <label className="mt-4 block max-w-xs text-sm font-semibold">Preço (R$)
-      <input required inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" />
-    </label>
-    <h4 className="mt-6 font-semibold">Estoque por cor</h4>
-    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{product.product_variants.map(v => <label key={v.id} className="text-sm">{v.color}
-      <input type="number" min="0" step="1" required value={stocks[v.id] ?? ""} onChange={e => setStocks(prev => ({ ...prev, [v.id]: e.target.value }))} className="mt-1 w-full rounded-lg border border-input bg-background p-2" />
-    </label>)}</div>
-    {feedback && <p role="status" className="mt-4 text-sm">{feedback}</p>}
-    <button disabled={saving} type="submit" className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{saving ? "Salvando..." : "Salvar preço e estoque"}</button>
-    <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
+  const inputClass = "mt-1 w-full rounded-lg border border-input bg-background p-2";
+  return <form onSubmit={save} className="mt-5 space-y-4 border-t border-border pt-5">
+    <div className="grid gap-3 sm:grid-cols-2">
+      {(["name","slug","brand","material","weight","diameter","price"] as const).map(key =>
+        <label key={key} className="text-sm font-semibold">{({ name:"Nome", slug:"Identificador / URL", brand:"Marca", material:"Material", weight:"Peso", diameter:"Diâmetro", price:"Preço (R$)" })[key]}
+          <input required={key === "name" || key === "slug" || key === "price"} value={fields[key]} onChange={e => setField(key,e.target.value)} className={inputClass} />
+        </label>
+      )}
+    </div>
+    <label className="block text-sm font-semibold">Descrição<textarea rows={3} value={fields.description} onChange={e => setField("description",e.target.value)} className={inputClass}/></label>
+    <h4 className="font-semibold">Imagens do produto</h4>
+    <label className="block text-sm">Foto principal (URL HTTPS)<input type="url" value={images[0]} onChange={e => setImage(0,e.target.value)} className={inputClass}/></label>
+    <h4 className="font-semibold">Editar cores, estoque e fotos</h4>
+    <p className="text-xs text-muted-foreground">As cores existentes são editadas no próprio registro, sem excluir variantes. A imagem de cada cor segue a ordem original das variantes.</p>
+    <div className="grid gap-4 md:grid-cols-2">{variants.map((v,i) => <div key={v.id} className="rounded-lg border border-border p-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {(["color","sku","stock","color_hex"] as const).map(key => <label key={key} className="text-xs font-semibold">{({color:"Nome da cor",sku:"SKU",stock:"Estoque",color_hex:"Cor hexadecimal (opcional)"})[key]}
+          <input value={variantFields[v.id][key]} onChange={e => setVariant(v.id,key,e.target.value)} className={inputClass} />
+        </label>)}
+      </div>
+      <label className="mt-3 block text-xs font-semibold">Foto desta cor (URL HTTPS)<input type="url" value={images[i+1]} onChange={e => setImage(i+1,e.target.value)} className={inputClass}/></label>
+      {images[i+1] && <img src={images[i+1]} alt={variantFields[v.id].color} className="mt-2 size-20 rounded border border-border object-cover" />}
+    </div>)}</div>
+    {feedback && <p role="status" className="text-sm">{feedback}</p>}
+    <button disabled={saving} type="submit" className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{saving ? "Salvando..." : "Salvar alterações do produto"}</button>
   </form>;
 }
 
@@ -287,6 +347,7 @@ function DraftProductEditor({ product, onSaved }: {
       <button type="button" disabled={busy} onClick={() => void save(false)} className="rounded-lg border border-input px-5 py-3 font-semibold disabled:opacity-50">{busy ? "Aguarde..." : "Salvar fotos"}</button>
       <button type="button" disabled={busy} onClick={() => void save(true)} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">Publicar produto</button>
     </div>
+    <details className="mt-5"><summary className="cursor-pointer font-semibold text-primary">Editar informações, preço, cores e estoque</summary><CatalogEditFields product={{ ...product, price: Number(product.price) }} onSaved={onSaved} /></details>
     <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
   </div>;
 }
