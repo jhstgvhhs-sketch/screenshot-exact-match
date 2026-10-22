@@ -124,9 +124,9 @@ function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const parsedPrice = Number(price.replace(",", "."));
-    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0 || !/^\\d+([.,]\\d{1,2})?$/.test(price.trim())) { setFeedback("Informe um preço válido, com até duas casas decimais."); return; }
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0 || !/^\d+([.,]\d{1,2})?$/.test(price.trim())) { setFeedback("Informe um preço válido, com até duas casas decimais."); return; }
     const changes = product.product_variants.filter(v => Number(stocks[v.id]) !== v.stock);
-    if (changes.some(v => !/^\\d+$/.test(stocks[v.id] ?? "") || !Number.isSafeInteger(Number(stocks[v.id])))) { setFeedback("O estoque deve ser um número inteiro não negativo."); return; }
+    if (changes.some(v => !/^\d+$/.test(stocks[v.id] ?? "") || !Number.isSafeInteger(Number(stocks[v.id])))) { setFeedback("O estoque deve ser um número inteiro não negativo."); return; }
     setSaving(true);
     setFeedback("");
     try {
