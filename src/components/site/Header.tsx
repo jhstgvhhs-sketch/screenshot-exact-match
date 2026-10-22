@@ -26,7 +26,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className="bg-gradient-primary py-1.5 text-center text-[11px] font-bold tracking-[0.2em] text-primary-foreground">
-        FILAMENTOS E ACESSÓRIOS PARA TODO O BRASIL
+        FRETE GRÁTIS ACIMA DE R$ 600,00 NO PIX
       </div>
       <div className="container-x flex h-16 items-center gap-4">
         <button className="md:hidden" aria-label="Abrir menu" onClick={() => setOpen(!open)}>
