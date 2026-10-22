@@ -21,6 +21,7 @@ function AdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [registering, setRegistering] = useState(false);
   const [message, setMessage] = useState("");
   const { data: products = [], isLoading: productsLoading } = useQuery({
     ...productsQuery(),
@@ -32,8 +33,15 @@ function AdminPage() {
     setBusy(true);
     setMessage("");
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (registering) {
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+        if (error) throw error;
+        setMessage(data.session ? "Conta criada. O acesso administrativo precisa ser autorizado." : "Cadastro solicitado. Confira seu e-mail para confirmar a conta. O acesso administrativo precisa ser autorizado.");
+        setRegistering(false);
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (error) throw error;
+      }
       setPassword("");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível entrar.");
@@ -47,18 +55,19 @@ function AdminPage() {
   if (!user) return (
     <section className="container-x mx-auto max-w-lg py-12">
       <h1 className="text-3xl font-bold">Administração 3DFLEX</h1>
-      <p className="mt-3 text-muted-foreground">Entre com sua conta autorizada para acessar o painel.</p>
+      <p className="mt-3 text-muted-foreground">Entre com sua conta ou crie uma nova. O acesso ao painel exige autorização administrativa.</p>
       <form onSubmit={authenticate} className="mt-6 space-y-4 rounded-xl border border-border bg-card p-6">
         <label className="block text-sm font-semibold">E-mail
           <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" />
         </label>
         <label className="block text-sm font-semibold">Senha
-          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" />
+          <input type="password" required autoComplete={registering ? "new-password" : "current-password"} minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" />
         </label>
         {message && <p role="alert" className="text-sm text-destructive">{message}</p>}
-        <button type="submit" disabled={busy} className="w-full rounded-lg bg-primary px-4 py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Entrando..." : "Entrar no painel"}</button>
+        <button type="submit" disabled={busy} className="w-full rounded-lg bg-primary px-4 py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Aguarde..." : registering ? "Criar conta" : "Entrar no painel"}</button>
+        <button type="button" disabled={busy} onClick={() => { setRegistering(!registering); setMessage(""); setPassword(""); }} className="w-full text-sm font-semibold text-primary underline">{registering ? "Já tenho conta — Entrar" : "Não tenho conta — Criar conta"}</button>
       </form>
-      <p className="mt-4 text-sm text-muted-foreground">A criação da conta e a autorização de administrador são realizadas separadamente, com segurança.</p>
+      <p className="mt-4 text-sm text-muted-foreground">Após criar a conta, confirme seu e-mail se solicitado. O cadastro não concede privilégios administrativos.</p>
     </section>
   );
 
