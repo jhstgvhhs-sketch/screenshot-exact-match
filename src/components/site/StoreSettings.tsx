@@ -59,7 +59,9 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
    finally { setUploading(""); e.target.value = ""; }
  }
  async function save(e: FormEvent<HTMLFormElement>) {
-   e.preventDefault(); setBusy(true); setMessage("");
+   e.preventDefault();
+   if (!window.confirm("Confirmar as alterações dos dados da loja? As informações salvas aparecerão no site.")) return;
+   setBusy(true); setMessage("");
    try {
      for (const url of [fields.logo_url, fields.banner_url]) if (url.trim() && !/^https:\/\//i.test(url.trim())) throw new Error("As imagens precisam usar URLs HTTPS.");
      const { id, ...values } = fields;
@@ -89,7 +91,7 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
        {fields[field] && <img src={fields[field]} alt={field === "logo_url" ? "Prévia da logo" : "Prévia do banner"} className="max-h-40 max-w-full rounded-lg border border-border object-contain"/>}
      </div>)}
    </div>
-   <button type="submit" disabled={busy || !!uploading} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Salvando..." : "Salvar dados da loja"}</button>
+   <button type="submit" disabled={busy || !!uploading} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Salvando..." : "Confirmar e salvar dados da loja"}</button>
    {message && <p role="status" className="text-sm">{message}</p>}
  </form>;
 }
