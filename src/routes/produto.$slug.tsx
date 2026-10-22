@@ -34,6 +34,8 @@ function ProdutoPage() {
   if (isLoading) return <p className="container-x py-10">Carregando...</p>;
   if (!p) return <p className="container-x py-10">Produto não encontrado.</p>;
   const v = p.product_variants.find((x) => x.id === vid);
+  const selectedIndex = p.product_variants.findIndex(x => x.id === vid);
+  const selectedImage = selectedIndex >= 0 ? (p.images?.[selectedIndex + 1] || productImage(p)) : productImage(p);
 
   const limit = v ? quantityLimit({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, quantity: 1, stock: v.stock }) : 1;
   const inCart = cart.items.find(i => i.variantId === v?.id)?.quantity ?? 0;
@@ -41,14 +43,14 @@ function ProdutoPage() {
   const add = (go: boolean) => {
     if (!v) { toast.error("Selecione uma cor"); return; }
     if (available < qty) { toast.error("Limite de estoque dessa cor atingido no carrinho"); return; }
-    cart.add({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, image: productImage(p), quantity: qty, stock: v.stock });
+    cart.add({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, image: selectedImage, quantity: qty, stock: v.stock });
     if (go) nav({ to: "/carrinho" });
     else toast.success("Adicionado ao carrinho");
   };
 
   return (
     <section className="container-x grid gap-10 py-10 md:grid-cols-2">
-      <img src={productImage(p)} alt={p.name} width={800} height={800} className="aspect-square w-full rounded-xl border border-border object-cover" />
+      <img src={selectedImage} alt={v ? `${p.name} — ${v.color}` : p.name} width={800} height={800} className="aspect-square w-full rounded-xl border border-border object-cover" />
       <div className="space-y-5">
         <p className="text-xs font-bold uppercase tracking-wider text-primary">{p.brand}</p>
         <h1 className="text-3xl font-bold">{p.name}</h1>
