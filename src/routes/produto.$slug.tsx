@@ -67,11 +67,11 @@ function ProdutoPage() {
           <div className="flex flex-wrap gap-2">
             {p.product_variants.map((x) => (
               <button key={x.id} onClick={() => { setVid(x.id); setQty(1); }} title={x.color} aria-label={x.color}
-                className={`size-9 rounded-full border-2 ${vid === x.id ? "border-primary" : "border-border"} ${x.stock === 0 ? "opacity-40" : ""}`}
+                className={`size-9 rounded-full border-2 ${vid === x.id ? "border-primary" : "border-border"}`}
                 style={{ background: x.color_hex ?? undefined }} />
             ))}
           </div>
-          {v && <p className="mt-2 text-sm text-muted-foreground">{v.stock > 0 ? "Disponível" : "Indisponível no momento"}</p>}
+          {v && <p className="mt-2 text-sm text-muted-foreground">{"Disponível para encomenda"}</p>}
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm">Qtd.</label>
