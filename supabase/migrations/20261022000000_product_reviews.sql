@@ -10,7 +10,7 @@ create table if not exists public.product_reviews (
 );
 create index if not exists product_reviews_product_approved_idx on public.product_reviews(product_id, approved, created_at desc);
 alter table public.product_reviews enable row level security;
-create policy "Anyone can read approved reviews" on public.product_reviews for select to anon, authenticated using (approved = true or public.has_role(auth.uid(), 'admin'));
+create policy "Anyone can read approved reviews" on public.product_reviews for select to anon, authenticated using (approved = true or public.has_role('admin', auth.uid()));
 create policy "Authenticated customers can submit pending reviews" on public.product_reviews for insert to authenticated with check (approved = false);
-create policy "Admins can moderate reviews" on public.product_reviews for update to authenticated using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
-create policy "Admins can delete reviews" on public.product_reviews for delete to authenticated using (public.has_role(auth.uid(), 'admin'));
+create policy "Admins can moderate reviews" on public.product_reviews for update to authenticated using (public.has_role('admin', auth.uid())) with check (public.has_role('admin', auth.uid()));
+create policy "Admins can delete reviews" on public.product_reviews for delete to authenticated using (public.has_role('admin', auth.uid()));
