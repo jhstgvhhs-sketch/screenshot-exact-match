@@ -37,6 +37,8 @@ Deno.serve(async (request) => {
       !customer || !/^[0-9]{11}$/.test(String(customer.cpf ?? ""))) {
     return json({ error: "Dados do pedido inválidos" }, 400);
   }
+  const postbackUrl = Deno.env.get("BLACKCAT_WEBHOOK_URL");
+  if (!postbackUrl?.startsWith("https://")) return json({ error: "Webhook não configurado" }, 503);
   const { data: orderId, error: orderError } = await userClient.rpc("place_order", {
     _items: items, _customer: customer, _coupon: "", _method: "pix"
   });
@@ -47,20 +49,17 @@ Deno.serve(async (request) => {
   const amount = Math.round(Number(order.total) * 100);
   if (!lines?.length || !Number.isSafeInteger(amount) || amount <= 0)
     return json({ error: "Pedido requer revisão", orderId }, 503);
-  const postbackUrl = Deno.env.get("BLACKCAT_WEBHOOK_URL");
-  if (!postbackUrl?.startsWith("https://"))
-    return json({ error: "Webhook não configurado", orderId }, 503);
   const charge = await createBlackcatPix({
     amount, paymentMethod: "pix", externalRef: orderId, postbackUrl,
     items: lines.map((line) => ({ title: line.product_name, quantity: line.quantity,
       unitPrice: Math.round(Number(line.unit_price) * 100), tangible: true })),
     customer: { name: order.customer_name, email: order.customer_email,
-      phone: String(order.customer_phone).replace(/\\D/g, ""),
-      document: String(order.customer_cpf).replace(/\\D/g, "") },
+      phone: String(order.customer_phone).replace(/\D/g, ""),
+      document: String(order.customer_cpf).replace(/\D/g, "") },
     shipping: { name: order.customer_name, street: order.ship_street,
       streetNumber: order.ship_number, neighborhood: order.ship_district,
       city: order.ship_city, state: order.ship_state,
-      zipCode: String(order.ship_cep).replace(/\\D/g, ""), country: "BR" }
+      zipCode: String(order.ship_cep).replace(/\D/g, ""), country: "BR" }
   });
   if (!charge?.transactionId || !charge?.paymentData?.copyPaste)
     return json({ error: "Resposta do gateway requer conciliação", orderId }, 503);
