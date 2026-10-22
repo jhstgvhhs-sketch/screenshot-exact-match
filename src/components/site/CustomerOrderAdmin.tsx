@@ -3,6 +3,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { brl } from "@/lib/store";
 
+const orderStatusPt: Record<string,string> = {pending:"Pendente",aguardando_pagamento:"Aguardando pagamento",processing:"Em preparação",processando:"Em preparação",shipped:"Enviado",enviado:"Enviado",delivered:"Entregue",entregue:"Entregue",cancelled:"Cancelado",cancelado:"Cancelado"};
+const paymentStatusPt: Record<string,string> = {pending:"Pendente",pendente:"Pendente",paid:"Pago",pago:"Pago",cancelado:"Cancelado",expired:"Expirado",expirado:"Expirado",failed:"Falhou"};
+const paymentMethodPt: Record<string,string> = {cartao:"Cartão de crédito",card:"Cartão de crédito",pix:"Pix"};
+const translate = (value:string|null, dict:Record<string,string>) => value ? (dict[value] ?? value) : "Não informado";
 export function CustomerOrderAdmin() {
  const client = useQueryClient();
  const [search,setSearch]=useState("");
@@ -14,12 +18,20 @@ export function CustomerOrderAdmin() {
   if(error)throw error;return data??[];
  }});
  const orders = useQuery({queryKey:["admin-orders"],queryFn:async()=>{
-  const {data,error}=await supabase.from("orders").select("id,user_id,customer_name,customer_email,customer_phone,created_at,total,subtotal,shipping,status,payment_status,payment_method,tracking_code,ship_city,ship_state").order("created_at",{ascending:false});
+  const {data,error}=await supabase.from("orders").select("id,user_id,customer_name,customer_email,customer_phone,created_at,total,subtotal,shipping,status,payment_status,payment_method,tracking_code,ship_city,ship_state").is("archived_at",null).order("created_at",{ascending:false});
   if(error)throw error;return data??[];
  }});
  const visibleCustomers=(customers.data??[]).filter(c=>([c.full_name,c.phone].join(" ").toLowerCase().includes(search.toLowerCase())));
- const visibleOrders=(orders.data??[]).filter(o=>filter==="all"||(filter==="paid"?o.payment_status==="paid":filter==="pending"?o.payment_status!=="paid":o.status===filter));
+ const visibleOrders=(orders.data??[]).filter(o=>filter==="all"||(filter==="paid"?["paid","pago"].includes(o.payment_status):filter==="pending"?!["paid","pago"].includes(o.payment_status):o.status===filter));
  const paid=(orders.data??[]).filter(o=>o.payment_status==="paid");
+ async function archiveOrder(id:string) {
+  if(!window.confirm("Remover este pedido da lista? Ele será arquivado, sem apagar registros financeiros ou devolver estoque automaticamente."))return;
+  setBusy(id);setMessage("");
+  const {data,error}=await supabase.rpc("archive_order_admin" as never,{p_order_id:id} as never);
+  setMessage(error?error.message:data?"Pedido removido da lista e arquivado.":"Não foi possível arquivar o pedido.");
+  if(!error&&data)void client.invalidateQueries({queryKey:["admin-orders"]});
+  setBusy("");
+ }
  async function updateOrder(id:string,updates:{status?:string;payment_status?:string;tracking_code?:string|null}) {
   if(updates.payment_status==="paid"&&!window.confirm("Você confirmou o recebimento real deste pagamento no banco, extrato ou gateway? Esta ação NÃO cobra o cliente."))return;
   if(!window.confirm("Confirmar atualização do pedido?"))return;
@@ -51,24 +63,25 @@ export function CustomerOrderAdmin() {
    {orders.isLoading&&<p className="mt-4">Carregando pedidos...</p>}
    {orders.isError&&<p role="alert" className="mt-4 text-sm text-destructive">Não foi possível consultar os pedidos. Verifique as políticas administrativas de orders.</p>}
    {!orders.isLoading&&!orders.isError&&!visibleOrders.length&&<p className="mt-4 text-sm text-muted-foreground">Nenhum pedido encontrado neste filtro.</p>}
-   <div className="mt-5 space-y-4">{visibleOrders.map(o=><OrderAdminCard key={o.id} order={o} busy={busy===o.id} onUpdate={updates=>void updateOrder(o.id,updates)}/>)}</div>
+   <div className="mt-5 space-y-4">{visibleOrders.map(o=><OrderAdminCard key={o.id} order={o} busy={busy===o.id} onUpdate={updates=>void updateOrder(o.id,updates)} onArchive={()=>void archiveOrder(o.id)}/>)}</div>
    {message&&<p role="status" className="mt-4 text-sm">{message}</p>}
   </section>
  </div>;
 }
 type AdminOrder={id:string;customer_name:string;customer_email:string;customer_phone:string;created_at:string;total:number;status:string;payment_status:string;payment_method:string|null;tracking_code:string|null;ship_city:string;ship_state:string};
-function OrderAdminCard({order,onUpdate,busy}:{order:AdminOrder;onUpdate:(updates:{status?:string;payment_status?:string;tracking_code?:string|null})=>void;busy:boolean}) {
+function OrderAdminCard({order,onUpdate,onArchive,busy}:{order:AdminOrder;onUpdate:(updates:{status?:string;payment_status?:string;tracking_code?:string|null})=>void;onArchive:()=>void;busy:boolean}) {
  const [status,setStatus]=useState(order.status);
  const [tracking,setTracking]=useState(order.tracking_code??"");
  return <article className="rounded-lg border border-border p-4">
   <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">Pedido {order.id.slice(0,8).toUpperCase()}</p><p className="mt-1 text-sm">{order.customer_name} · {order.customer_email}</p><p className="mt-1 text-sm text-muted-foreground">{order.customer_phone} · {order.ship_city}/{order.ship_state} · {new Date(order.created_at).toLocaleDateString("pt-BR")}</p></div><p className="text-lg font-bold">{brl(Number(order.total))}</p></div>
-  <p className="mt-3 text-sm">Pagamento: <strong>{order.payment_status}</strong> · Método: {order.payment_method||"Não informado"}</p>
+  <p className="mt-3 text-sm">Pagamento: <strong>{translate(order.payment_status,paymentStatusPt)}</strong> · Método: {translate(order.payment_method,paymentMethodPt)}</p>
   <div className="mt-4 grid gap-3 md:grid-cols-2">
-   <label className="text-sm">Status do pedido<select value={status} onChange={e=>setStatus(e.target.value)} className="mt-1 w-full rounded-lg border border-input bg-background p-2"><option value={order.status}>{order.status}</option>{["pending","processing","shipped","delivered","cancelled"].filter(s=>s!==order.status).map(s=><option key={s} value={s}>{({pending:"Pendente",processing:"Em processamento",shipped:"Enviado",delivered:"Entregue",cancelled:"Cancelado"} as Record<string,string>)[s]}</option>)}</select></label>
+   <label className="text-sm">Status do pedido<select value={status} onChange={e=>setStatus(e.target.value)} className="mt-1 w-full rounded-lg border border-input bg-background p-2"><option value={order.status}>{translate(order.status,orderStatusPt)}</option>{["pending","processing","shipped","delivered","cancelled"].filter(s=>s!==order.status).map(s=><option key={s} value={s}>{translate(s,orderStatusPt)}</option>)}</select></label>
    <label className="text-sm">Código de rastreio<input value={tracking} onChange={e=>setTracking(e.target.value)} maxLength={120} className="mt-1 w-full rounded-lg border border-input bg-background p-2"/></label>
   </div>
   <div className="mt-4 flex flex-wrap gap-3">
    <button type="button" disabled={busy||(status===order.status&&tracking===(order.tracking_code??""))} onClick={()=>onUpdate({status,tracking_code:tracking.trim()||null})} className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground disabled:opacity-50">Salvar andamento</button>
+   <button type="button" disabled={busy} onClick={onArchive} className="rounded-lg border border-destructive px-4 py-2 font-semibold text-destructive disabled:opacity-50">Apagar da lista</button>
    {order.payment_status!=="paid"&&<button type="button" disabled={busy} onClick={()=>onUpdate({payment_status:"paid"})} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary disabled:opacity-50">Confirmar pagamento recebido</button>}
   </div>
  </article>;
