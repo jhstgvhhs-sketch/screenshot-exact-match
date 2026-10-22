@@ -40,8 +40,8 @@ BEGIN
     FROM public.product_variants pv JOIN public.products p ON p.id=pv.product_id
     WHERE pv.id=(it->>'variant_id')::uuid AND p.active FOR UPDATE OF pv;
     IF NOT FOUND THEN RAISE EXCEPTION 'Produto indisponível'; END IF;
-    IF v.stock < q THEN RAISE EXCEPTION 'Estoque insuficiente para % (%)',v.name,v.color; END IF;
-    UPDATE public.product_variants SET stock=stock-q WHERE id=v.id;
+    -- Orders beyond on-hand stock are accepted as preorders; never allow negative inventory.
+    UPDATE public.product_variants SET stock=GREATEST(0,stock-q) WHERE id=v.id;
     INSERT INTO public.order_items(order_id,product_id,variant_id,product_name,color,sku,unit_price,quantity)
     VALUES(_order,v.pid,v.id,v.name,v.color,v.sku,v.price,q);
     _sub := _sub+v.price*q;
