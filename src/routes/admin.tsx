@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { productsQuery, categoriesQuery, totalStock } from "@/lib/catalog";
 import { brl } from "@/lib/store";
+import { CustomerOrderAdmin } from "@/components/site/CustomerOrderAdmin";
 import { StoreSettingsEditor } from "@/components/site/StoreSettings";
 import { ReviewModeration, AdminAddReview } from "@/components/site/ProductReviews";
 
@@ -114,6 +115,7 @@ function AdminPage() {
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Variantes</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + p.product_variants.length, 0)}</p></div>
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Unidades em estoque</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + totalStock(p), 0)}</p></div>
       </div>
+      <CustomerOrderAdmin />
       <StoreSettingsEditor />
       <CategoryManager categories={categories} onSaved={refreshCatalog} />
       <AdminAddReview products={[...products, ...inactiveProducts].map(p => ({ id: p.id, name: p.name }))} />
