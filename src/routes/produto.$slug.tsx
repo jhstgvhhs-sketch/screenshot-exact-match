@@ -71,7 +71,7 @@ function ProdutoPage() {
                 style={{ background: x.color_hex ?? undefined }} />
             ))}
           </div>
-          {v && <p className="mt-2 text-sm text-muted-foreground">{"Disponível para encomenda"}</p>}
+          {v && <p className="mt-2 text-sm text-muted-foreground">{v.stock > 0 ? "Disponível" : "Sob encomenda"}</p>}
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm">Qtd.</label>
