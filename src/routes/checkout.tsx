@@ -15,6 +15,8 @@ type Payment = "pix" | "card";
 function Checkout() {
   const { items, subtotal } = useCart();
   const [payment, setPayment] = useState<Payment>("pix");
+  const [step, setStep] = useState<"details" | "payment">("details");
+  const [deliveryData, setDeliveryData] = useState<FormData | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [validated, setValidated] = useState(false);
 
@@ -22,18 +24,19 @@ function Checkout() {
     event.preventDefault();
     // A cobrança só poderá ser iniciada após integração segura no servidor.
     const data = new FormData(event.currentTarget);
-    setWhatsappUrl(payment === "card" ? cardWhatsAppUrl(items, subtotal, data) : null);
-    setValidated(true);
+    setDeliveryData(data);
+    setStep("payment");
+    setValidated(false);
   }
 
   if (!items.length) return <section className="container-x py-12"><h1 className="text-3xl font-bold">Finalizar compra</h1><p className="mt-4 text-muted-foreground">Seu carrinho está vazio.</p><Link className="mt-5 inline-block text-primary underline" to="/produtos">Explorar produtos</Link></section>;
 
   const fieldClass = "w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   return <section className="container-x py-10">
-    <h1 className="text-3xl font-bold">Finalizar compra</h1>
-    <p className="mt-2 text-sm text-muted-foreground">Confira seu pedido e preencha seus dados. Nenhum pagamento será cobrado nesta etapa.</p>
+    <h1 className="text-3xl font-bold">{step === "details" ? "Dados de entrega" : "Pagamento"}</h1>
+    <p className="mt-2 text-sm text-muted-foreground">{step === "details" ? "Etapa 1 de 2 — Informe seus dados para continuar ao pagamento." : "Etapa 2 de 2 — Escolha a forma de pagamento. Nenhuma cobrança será feita automaticamente."}</p>
     <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <form id="checkout-form" onSubmit={handleSubmit} onChange={() => { setValidated(false); setWhatsappUrl(null); }} className="space-y-6">
+      {step === "details" ? <form id="checkout-form" onSubmit={handleSubmit} onChange={() => { setValidated(false); setWhatsappUrl(null); }} className="space-y-6">
         <fieldset className="space-y-4 rounded-xl border border-border bg-card p-5">
           <legend className="px-2 font-bold">Seus dados</legend>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -54,15 +57,24 @@ function Checkout() {
             <label className="space-y-1 text-sm">Estado (UF)<input name="state" required autoComplete="address-level1" pattern="[A-Za-z]{2}" title="Informe a sigla do estado com 2 letras" maxLength={2} className={fieldClass}/></label>
           </div>
         </fieldset>
+        <button type="submit" className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground hover:opacity-90">Continuar para pagamento</button>
+      </form> : <div className="space-y-6">
         <fieldset className="space-y-3 rounded-xl border border-border bg-card p-5">
-          <legend className="px-2 font-bold">Forma de pagamento</legend>
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3"><input type="radio" name="payment" checked={payment === "pix"} onChange={() => {setPayment("pix"); setValidated(false);}} className="mt-1 accent-primary"/><span><strong>Pix — Blackcat</strong><span className="block text-xs text-muted-foreground">Integração de cobrança ainda não ativada.</span></span></label>
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3"><input type="radio" name="payment" checked={payment === "card"} onChange={() => {setPayment("card"); setValidated(false);}} className="mt-1 accent-primary"/><span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">{cardWhatsAppUrl() ? "Continue no WhatsApp para combinar o pagamento por cartão." : "Aguardando cadastro do número de atendimento."}</span></span></label>
+          <legend className="px-2 font-bold">Escolha como pagar</legend>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+            <input type="radio" name="payment" checked={payment === "pix"} onChange={() => { setPayment("pix"); setValidated(false); }} className="mt-1 accent-primary" />
+            <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">Pagamento instantâneo. A cobrança online ainda não está ativada.</span></span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+            <input type="radio" name="payment" checked={payment === "card"} onChange={() => { setPayment("card"); setValidated(false); }} className="mt-1 accent-primary" />
+            <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Continue pelo atendimento para combinar o pagamento.</span></span>
+          </label>
         </fieldset>
-        <button type="submit" className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground hover:opacity-90">Conferir dados para pagamento</button>
-        {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">Dados preenchidos e validados no navegador. {payment === "pix" ? "O Pix ainda não está disponível: aguardando integração segura com a Blackcat." : (whatsappUrl ? "Continue pelo WhatsApp para solicitar o pagamento por cartão." : "A finalização por cartão ainda não está disponível: aguardando configuração do WhatsApp.")} Nenhum pedido foi criado ou cobrado.</p>}
-        {validated && whatsappUrl && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
-      </form>
+        <button type="button" onClick={() => { setWhatsappUrl(payment === "card" && deliveryData ? cardWhatsAppUrl(items, subtotal, deliveryData) : null); setValidated(true); }} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground">Continuar com {payment === "pix" ? "Pix" : "cartão"}</button>
+        {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">{payment === "pix" ? "O Pix ainda não está disponível para cobrança online. Nenhum pedido foi criado ou cobrado." : whatsappUrl ? "Continue pelo WhatsApp para solicitar o pagamento por cartão. Nenhum pedido foi criado ou cobrado." : "Atendimento por WhatsApp ainda não configurado. Nenhum pedido foi criado ou cobrado."}</p>}
+        {validated && whatsappUrl && payment === "card" && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
+        <button type="button" onClick={() => { setStep("details"); setValidated(false); setWhatsappUrl(null); }} className="text-sm font-semibold text-primary underline">Voltar aos dados de entrega</button>
+      </div>}
       <aside className="h-fit space-y-4 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-24">
         <h2 className="text-lg font-bold">Resumo do pedido</h2>
         <ul className="space-y-3 text-sm">{items.map(item => <li key={item.variantId} className="flex justify-between gap-3"><span>{item.name} — {item.color} × {item.quantity}</span><span className="shrink-0">{brl(item.price * item.quantity)}</span></li>)}</ul>
