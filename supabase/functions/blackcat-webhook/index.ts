@@ -16,10 +16,15 @@ Deno.serve(async(req)=>{
   if(status.transactionId!==transactionId||Number(status.amount)!==payment.amount_cents)return json({error:"Gateway amount mismatch"},409);
   const next=String(status.status).toUpperCase()==="PAID"?"paid":String(status.status).toUpperCase()==="REFUNDED"?"refunded":String(status.status).toUpperCase()==="CANCELLED"?"cancelled":"pending";
   if(next==="paid"&&payment.status!=="paid") {
-    const {error:updateError}=await admin.from("pix_transactions").update({status:"paid"}).eq("order_id",payment.order_id).eq("status","pending");
-    if(updateError)return json({error:"Failed to persist payment"},500);
-    const {error:orderError}=await admin.from("orders").update({payment_status:"pago",status:"pagamento_confirmado"}).eq("id",payment.order_id).eq("payment_status","pendente");
+    const {data:confirmed,error:orderError}=await admin.from("orders")
+      .update({payment_status:"pago",status:"pagamento_confirmado"})
+      .eq("id",payment.order_id).eq("payment_status","pendente")
+      .eq("status","aguardando_pagamento").select("id");
     if(orderError)return json({error:"Failed to update order"},500);
+    if(!confirmed?.length)return json({error:"Payment requires manual reconciliation; order no longer pending"},409);
+    const {error:updateError}=await admin.from("pix_transactions")
+      .update({status:"paid"}).eq("order_id",payment.order_id).eq("status","pending");
+    if(updateError)return json({error:"Failed to persist payment"},500);
   } else if(next==="cancelled" && payment.status==="pending"){
     const {data:released,error:releaseError}=await admin.rpc("release_unpaid_order_stock",{p_order_id:payment.order_id,p_payment_status:"cancelado"});
     if(releaseError)return json({error:"Failed to release reserved stock"},500);
