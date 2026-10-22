@@ -14,7 +14,8 @@ const input = "mt-1 w-full rounded-lg border border-input bg-background px-3 py-
 type Tab = "dados" | "enderecos" | "pedidos";
 function CustomerAccount() {
   const { user, loading } = useAuth();
-  const [tab, setTab] = useState<Tab>("dados");
+  const { aba } = Route.useSearch();
+  const [tab, setTab] = useState<Tab>(aba === "pedidos" || aba === "enderecos" ? aba : "dados");
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
