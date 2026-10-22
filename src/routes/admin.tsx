@@ -30,6 +30,20 @@ function AdminPage() {
     enabled: !!user && isAdmin && !loading,
   });
 
+  const { data: inactiveProducts = [], isLoading: inactiveLoading } = useQuery({
+    queryKey: ["admin-inactive-products"],
+    enabled: !!user && isAdmin && !loading,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("products").select("*, product_variants(*)").eq("active", false).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+  const refreshCatalog = () => {
+    void queryClient.invalidateQueries({ queryKey: ["products"] });
+    void queryClient.invalidateQueries({ queryKey: ["admin-inactive-products"] });
+  };
+
   async function authenticate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -96,7 +110,11 @@ function AdminPage() {
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Variantes</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + p.product_variants.length, 0)}</p></div>
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Unidades em estoque</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + totalStock(p), 0)}</p></div>
       </div>
-      <NewProductForm onSaved={() => void queryClient.invalidateQueries({ queryKey: ["products"] })} />
+      <NewProductForm onSaved={refreshCatalog} />
+      <h2 className="mt-10 text-xl font-bold">Produtos aguardando publicação</h2>
+      {inactiveLoading && <p className="mt-3">Carregando rascunhos...</p>}
+      <div className="mt-4 space-y-4">{inactiveProducts.map(p => <DraftProductEditor key={p.id} product={p} onSaved={refreshCatalog} />)}</div>
+      {!inactiveLoading && !inactiveProducts.length && <p className="mt-3 text-sm text-muted-foreground">Nenhum produto inativo.</p>}
       <h2 className="mt-10 text-xl font-bold">Catálogo</h2>
       <p className="mt-2 text-sm text-muted-foreground">Edite o preço e o estoque de cada cor. As alterações são gravadas no banco da loja somente quando você clicar em Salvar.</p>
       {productsLoading ? <p className="mt-4">Carregando produtos...</p> : (
@@ -224,4 +242,49 @@ function NewProductForm({ onSaved }: { onSaved: () => void }) {
     {feedback && <p role="status" className="mt-4 text-sm">{feedback}</p>}
     <button disabled={busy} type="submit" className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Cadastrando..." : "Cadastrar produto como inativo"}</button>
   </form>;
+}
+
+function DraftProductEditor({ product, onSaved }: {
+  product: { id: string; name: string; images: string[]; product_variants: { id: string; color: string; sort: number }[] };
+  onSaved: () => void;
+}) {
+  const variants = [...product.product_variants].sort((a, b) => a.sort - b.sort);
+  const [mainImage, setMainImage] = useState(product.images?.[0] ?? "");
+  const [colorImages, setColorImages] = useState<Record<string, string>>(() => Object.fromEntries(variants.map((v, i) => [v.id, product.images?.[i + 1] ?? ""])));
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const validUrl = (s: string) => { try { const u = new URL(s); return u.protocol === "https:"; } catch { return false; } };
+  async function save(publish: boolean) {
+    const urls = [mainImage.trim(), ...variants.map(v => (colorImages[v.id] ?? "").trim())];
+    if (urls.some(u => u && !validUrl(u))) { setFeedback("Use links de imagens HTTPS válidos."); return; }
+    if (publish && urls.some(u => !u)) { setFeedback("Adicione a foto principal e uma foto para cada cor antes de publicar."); return; }
+    // Positional mapping: images[0] is main image, images[i+1] follows variant sort.
+    const images = publish ? urls : urls.slice(0, urls.findLastIndex(Boolean) + 1);
+    setBusy(true); setFeedback("");
+    try {
+      const { data, error } = await supabase.from("products").update({ images, active: publish }).eq("id", product.id).eq("active", false).select("id").single();
+      if (error) throw error;
+      if (!data) throw new Error("Não foi possível confirmar a atualização.");
+      setFeedback(publish ? "Produto publicado na loja." : "Fotos salvas no banco.");
+      onSaved();
+    } catch (error) { setFeedback(error instanceof Error ? error.message : "Erro ao salvar."); }
+    finally { setBusy(false); }
+  }
+  return <div className="rounded-xl border border-border bg-card p-5">
+    <h3 className="text-lg font-bold">{product.name}</h3>
+    <p className="mt-1 text-sm text-muted-foreground">Inativo — ainda não aparece no catálogo público.</p>
+    <label className="mt-4 block text-sm font-semibold">Foto principal (URL HTTPS)
+      <input type="url" value={mainImage} onChange={e => setMainImage(e.target.value)} placeholder="https://..." className="mt-2 w-full rounded-lg border border-input bg-background p-3" />
+    </label>
+    <p className="mt-4 text-sm font-semibold">Fotos por cor (links HTTPS)</p>
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">{variants.map(v => <label key={v.id} className="text-sm">{v.color}
+      <input type="url" value={colorImages[v.id] ?? ""} onChange={e => setColorImages(prev => ({ ...prev, [v.id]: e.target.value }))} placeholder="https://..." className="mt-1 w-full rounded-lg border border-input bg-background p-2" />
+    </label>)}</div>
+    <p className="mt-3 text-xs text-muted-foreground">Nesta etapa, as imagens são cadastradas por URL. O envio de arquivos e a troca automática de imagem ao selecionar uma cor serão implementados separadamente.</p>
+    {feedback && <p role="status" className="mt-4 text-sm">{feedback}</p>}
+    <div className="mt-5 flex flex-wrap gap-3">
+      <button type="button" disabled={busy} onClick={() => void save(false)} className="rounded-lg border border-input px-5 py-3 font-semibold disabled:opacity-50">{busy ? "Aguarde..." : "Salvar fotos"}</button>
+      <button type="button" disabled={busy} onClick={() => void save(true)} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">Publicar produto</button>
+    </div>
+  </div>;
 }
