@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react";
 import { quantityLimit } from "@/lib/cart-stock";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
-import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
+import { FIXED_SHIPPING_BRL, FREE_PIX_SHIPPING_THRESHOLD_BRL } from "@/lib/shipping";
 
 export const Route = createFileRoute("/carrinho")({
   head: () => ({
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/carrinho")({
 
 function Carrinho() {
   const { items, setQty, remove, subtotal } = useCart();
+  const eligibleForFreePixShipping = subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL;
   return (
     <section className="container-x py-10">
       <h1 className="text-3xl font-bold">Carrinho</h1>
@@ -36,9 +37,11 @@ function Carrinho() {
           </ul>
           <aside className="h-fit space-y-2 rounded-xl border border-border bg-card p-5 text-sm">
             <div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div>
-            <div className="flex justify-between"><span>Frete</span><span>{brl(FIXED_SHIPPING_BRL)}</span></div>
-            <div className="flex justify-between border-t border-border pt-2 text-lg font-bold"><span>Total com frete</span><span>{brl(subtotal + FIXED_SHIPPING_BRL)}</span></div>
-            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Frete grátis em compras acima de R$ 600,00 pagas no Pix. O desconto aparece ao selecionar Pix no checkout.</p><p className="pt-2 text-xs text-muted-foreground">Pagamentos ainda não ativados; nenhuma cobrança será realizada.</p>
+            <div className="flex justify-between"><span>Frete no Pix</span><span>{eligibleForFreePixShipping ? <span className="font-bold text-green-600">GRÁTIS</span> : brl(FIXED_SHIPPING_BRL)}</span></div>
+            {eligibleForFreePixShipping && <div className="flex justify-between text-green-600"><span>Desconto no frete (Pix)</span><span>-{brl(FIXED_SHIPPING_BRL)}</span></div>}
+            <div className="flex justify-between border-t border-border pt-2 text-lg font-bold"><span>Total no Pix</span><span>{brl(subtotal + (eligibleForFreePixShipping ? 0 : FIXED_SHIPPING_BRL))}</span></div>
+            {eligibleForFreePixShipping && <p className="text-xs text-muted-foreground">No cartão, o total será {brl(subtotal + FIXED_SHIPPING_BRL)} (frete de {brl(FIXED_SHIPPING_BRL)}).</p>}
+            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix. O valor final depende da forma de pagamento escolhida no checkout.</p><p className="pt-2 text-xs text-muted-foreground">Pagamentos ainda não ativados; nenhuma cobrança será realizada.</p>
           </aside>
         </div>
       )}
