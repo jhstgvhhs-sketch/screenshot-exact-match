@@ -41,8 +41,36 @@ Deno.serve(async (request) => {
     _items: items, _customer: customer, _coupon: "", _method: "pix"
   });
   if (orderError || !orderId) return json({ error: orderError?.message ?? "Falha ao criar pedido" }, 409);
-  const { data: order } = await admin.from("orders").select("id,total,user_id").eq("id", orderId).eq("user_id", user.id).single();
+  const { data: order } = await admin.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).single();
   if (!order) return json({ error: "Pedido não encontrado", orderId }, 500);
-  void createBlackcatPix;
-  return json({ error: "Cobrança pendente de validação do gateway", orderId }, 503);
+  const { data: lines } = await admin.from("order_items").select("product_name,unit_price,quantity").eq("order_id", orderId);
+  const amount = Math.round(Number(order.total) * 100);
+  if (!lines?.length || !Number.isSafeInteger(amount) || amount <= 0)
+    return json({ error: "Pedido requer revisão", orderId }, 503);
+  const postbackUrl = Deno.env.get("BLACKCAT_WEBHOOK_URL");
+  if (!postbackUrl?.startsWith("https://"))
+    return json({ error: "Webhook não configurado", orderId }, 503);
+  const charge = await createBlackcatPix({
+    amount, paymentMethod: "pix", externalRef: orderId, postbackUrl,
+    items: lines.map((line) => ({ title: line.product_name, quantity: line.quantity,
+      unitPrice: Math.round(Number(line.unit_price) * 100), tangible: true })),
+    customer: { name: order.customer_name, email: order.customer_email,
+      phone: String(order.customer_phone).replace(/\\D/g, ""),
+      document: String(order.customer_cpf).replace(/\\D/g, "") },
+    shipping: { name: order.customer_name, street: order.ship_street,
+      streetNumber: order.ship_number, neighborhood: order.ship_district,
+      city: order.ship_city, state: order.ship_state,
+      zipCode: String(order.ship_cep).replace(/\\D/g, ""), country: "BR" }
+  });
+  if (!charge?.transactionId || !charge?.paymentData?.copyPaste)
+    return json({ error: "Resposta do gateway requer conciliação", orderId }, 503);
+  const { error: ledgerError } = await admin.from("pix_transactions").insert({
+    order_id: orderId, transaction_id: charge.transactionId,
+    amount_cents: amount, status: "pending",
+    copy_paste: charge.paymentData.copyPaste,
+    qr_code_base64: charge.paymentData.qrCodeBase64 ?? null
+  });
+  if (ledgerError) return json({ error: "Cobrança requer conciliação manual", orderId }, 503);
+  return json({ orderId, copyPaste: charge.paymentData.copyPaste,
+    qrCodeBase64: charge.paymentData.qrCodeBase64 ?? null, amountCents: amount });
 });
