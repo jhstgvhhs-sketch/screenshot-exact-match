@@ -38,7 +38,7 @@ function Carrinho() {
             <div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div>
             <div className="flex justify-between"><span>Frete</span><span>{brl(FIXED_SHIPPING_BRL)}</span></div>
             <div className="flex justify-between border-t border-border pt-2 text-lg font-bold"><span>Total com frete</span><span>{brl(subtotal + FIXED_SHIPPING_BRL)}</span></div>
-            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Pagamentos ainda não ativados; nenhuma cobrança será realizada.</p>
+            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Frete grátis em compras acima de R$ 600,00 pagas no Pix. O desconto aparece ao selecionar Pix no checkout.</p><p className="pt-2 text-xs text-muted-foreground">Pagamentos ainda não ativados; nenhuma cobrança será realizada.</p>
           </aside>
         </div>
       )}
