@@ -16,6 +16,7 @@ type Payment = "pix" | "card";
 function Checkout() {
   const { items, subtotal } = useCart();
   const [payment, setPayment] = useState<Payment>("pix");
+  const [cardShippingConfirmed, setCardShippingConfirmed] = useState(false);
   const [step, setStep] = useState<"details" | "payment">("details");
   const [deliveryData, setDeliveryData] = useState<FormData | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
@@ -119,16 +120,26 @@ function Checkout() {
         <fieldset className="space-y-3 rounded-xl border border-border bg-card p-5">
           <legend className="px-2 font-bold">Escolha como pagar</legend>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
-            <input type="radio" name="payment" checked={payment === "pix"} onChange={() => { setPayment("pix"); setValidated(false); }} className="mt-1 accent-primary" />
+            <input type="radio" name="payment" checked={payment === "pix"} onChange={() => { setPayment("pix"); setCardShippingConfirmed(false); setValidated(false); }} className="mt-1 accent-primary" />
             <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">Pagamento instantâneo. Disponível após a validação segura do gateway.</span></span>
           </label>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
-            <input type="radio" name="payment" checked={payment === "card"} onChange={() => { setPayment("card"); setValidated(false); }} className="mt-1 accent-primary" />
+            <input type="radio" name="payment" checked={payment === "card"} onChange={() => { setPayment("card"); setCardShippingConfirmed(false); setValidated(false); }} className="mt-1 accent-primary" />
             <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Continue pelo atendimento para combinar o pagamento.</span></span>
           </label>
         </fieldset>
-        {payment === "card" && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && <div role="status" className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm"><p className="font-bold">Frete grátis no Pix! Não quer aproveitar?</p><p className="mt-1 text-muted-foreground">Pagando no Pix, você economiza {brl(shippingForOrder(subtotal, "card"))} no frete.</p><button type="button" onClick={() => { setPayment("pix"); setValidated(false); }} className="mt-3 rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground">Quero aproveitar o frete grátis no Pix</button></div>}
-        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } void beginCard(); }} disabled={pixLoading || cardLoading || (payment === "card" && !!cardOrderId)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
+        {payment === "card" && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed && (
+          <div role="alert" className="space-y-3 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
+            <p className="text-base font-bold">Frete grátis no Pix! Não quer aproveitar?</p>
+            <p className="text-muted-foreground">Você economiza {brl(shippingForOrder(subtotal, "card"))} escolhendo Pix. No cartão, o frete continua {brl(shippingForOrder(subtotal, "card"))}.</p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button type="button" onClick={() => { setPayment("pix"); setCardShippingConfirmed(false); setValidated(false); }} className="rounded-lg bg-primary px-4 py-3 font-bold text-primary-foreground">Quero frete grátis no Pix</button>
+              <button type="button" onClick={() => setCardShippingConfirmed(true)} className="rounded-lg border border-input bg-background px-4 py-3 font-semibold text-foreground">Quero continuar no cartão mesmo</button>
+            </div>
+          </div>
+        )}
+        {payment === "card" && cardShippingConfirmed && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && <p className="text-xs text-muted-foreground">Você escolheu continuar no cartão com frete de {brl(shippingForOrder(subtotal, "card"))}. <button type="button" className="underline text-primary" onClick={() => setCardShippingConfirmed(false)}>Rever oferta Pix</button></p>}
+        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={pixLoading || cardLoading || (payment === "card" && !!cardOrderId) || (payment === "card" && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
         {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
         {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
         {pixData && payment === "pix" && <div className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="font-bold">Pagamento Pix — pedido {pixData.orderId}</h2>{pixData.qrCodeBase64 && <img className="mx-auto h-56 w-56 object-contain" alt="QR Code Pix" src={pixData.qrCodeBase64.startsWith("data:") ? pixData.qrCodeBase64 : `data:image/png;base64,${pixData.qrCodeBase64}`} />}<label className="block text-sm">Pix copia e cola<textarea className="mt-2 w-full rounded-lg border bg-background p-3" readOnly rows={3} value={pixData.copyPaste}/></label><button type="button" className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={() => void navigator.clipboard.writeText(pixData.copyPaste)}>Copiar código Pix</button><p className="text-sm text-muted-foreground">Aguarde a confirmação do pagamento. Não faça um novo pedido enquanto este estiver pendente.</p></div>}
