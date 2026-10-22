@@ -1,5 +1,10 @@
 -- Update the secure order placement quantity limit to 10 per color.
 -- Does not change existing stock or overwrite inventory reservations.
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS reserved_stock integer;
+-- Existing orders used full stock reservation; preserve their accounting.
+UPDATE public.order_items SET reserved_stock = quantity WHERE reserved_stock IS NULL;
+ALTER TABLE public.order_items ALTER COLUMN reserved_stock SET DEFAULT 0;
+
 CREATE OR REPLACE FUNCTION public.place_order(_items jsonb, _customer jsonb, _coupon text, _method text)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $function$
@@ -13,6 +18,7 @@ DECLARE
   v record;
   c record;
   q integer;
+  reserved integer;
 BEGIN
   IF _uid IS NULL THEN RAISE EXCEPTION 'Faça login para finalizar a compra'; END IF;
   IF _method NOT IN ('pix','cartao') THEN RAISE EXCEPTION 'Forma de pagamento inválida'; END IF;
@@ -41,9 +47,10 @@ BEGIN
     WHERE pv.id=(it->>'variant_id')::uuid AND p.active FOR UPDATE OF pv;
     IF NOT FOUND THEN RAISE EXCEPTION 'Produto indisponível'; END IF;
     -- Orders beyond on-hand stock are accepted as preorders; never allow negative inventory.
-    UPDATE public.product_variants SET stock=GREATEST(0,stock-q) WHERE id=v.id;
-    INSERT INTO public.order_items(order_id,product_id,variant_id,product_name,color,sku,unit_price,quantity)
-    VALUES(_order,v.pid,v.id,v.name,v.color,v.sku,v.price,q);
+    reserved := LEAST(v.stock, q);
+    UPDATE public.product_variants SET stock=stock-reserved WHERE id=v.id;
+    INSERT INTO public.order_items(order_id,product_id,variant_id,product_name,color,sku,unit_price,quantity,reserved_stock)
+    VALUES(_order,v.pid,v.id,v.name,v.color,v.sku,v.price,q,reserved);
     _sub := _sub+v.price*q;
   END LOOP;
   IF coalesce(_coupon,'')<>'' THEN
@@ -81,3 +88,29 @@ $function$;
   RETURN _order;
 END
 $function$;
+
+-- Only restore inventory actually reserved, not quantities accepted on preorder.
+CREATE OR REPLACE FUNCTION public.release_unpaid_order_stock(
+  p_order_id uuid, p_payment_status text DEFAULT 'cancelado'
+)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_order_id uuid;
+BEGIN
+  IF p_payment_status NOT IN ('cancelado', 'expirado') THEN
+    RAISE EXCEPTION 'Status inválido para liberação de estoque';
+  END IF;
+  UPDATE public.orders
+  SET payment_status = p_payment_status, status = 'cancelado'
+  WHERE id = p_order_id AND payment_status = 'pendente'
+    AND status = 'aguardando_pagamento'
+  RETURNING id INTO v_order_id;
+  IF v_order_id IS NULL THEN RETURN false; END IF;
+  UPDATE public.product_variants pv SET stock = pv.stock + r.qty
+  FROM (SELECT variant_id, SUM(COALESCE(reserved_stock,quantity))::integer qty
+        FROM public.order_items WHERE order_id = v_order_id AND variant_id IS NOT NULL
+        GROUP BY variant_id) r WHERE pv.id=r.variant_id;
+  RETURN true;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.release_unpaid_order_stock(uuid,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.release_unpaid_order_stock(uuid,text) TO service_role;
