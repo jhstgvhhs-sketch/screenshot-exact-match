@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -17,9 +17,25 @@ function CustomerAccount() {
   const [tab, setTab] = useState<Tab>("dados");
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!user) return;
+    const metadata = user.user_metadata as { full_name?: string; phone?: string };
+    if (!metadata?.full_name && !metadata?.phone) return;
+    void (async () => {
+      const { data, error } = await supabase.from("profiles").select("id,full_name,phone").eq("id", user.id).maybeSingle();
+      if (error) return;
+      if (!data) {
+        await supabase.from("profiles").insert({ id: user.id, full_name: metadata.full_name ?? null, phone: metadata.phone ?? null });
+      } else if (!data.full_name || !data.phone) {
+        await supabase.from("profiles").update({ full_name: data.full_name || metadata.full_name || null, phone: data.phone || metadata.phone || null }).eq("id", user.id);
+      }
+    })();
+  }, [user?.id]);
   async function auth(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setNotice("");
     try {
@@ -28,8 +44,15 @@ function CustomerAccount() {
         if (error) throw error;
         setNotice("Se este e-mail estiver cadastrado, enviaremos instruções de recuperação.");
       } else if (mode === "register") {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+        const cleanName = fullName.trim();
+        const cleanPhone = phone.replace(/\D/g, "");
+        if (cleanName.length < 3 || cleanPhone.length < 10 || cleanPhone.length > 11) throw new Error("Informe nome completo e telefone com DDD (10 ou 11 dígitos).");
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: cleanName, phone: cleanPhone } } });
         if (error) throw error;
+        if (data.session && data.user) {
+          const { error: profileError } = await supabase.from("profiles").upsert({ id: data.user.id, full_name: cleanName, phone: cleanPhone }, { onConflict: "id" });
+          if (profileError) setNotice("Conta criada, mas os dados do perfil não foram sincronizados. Verifique em Meus dados.");
+        }
         setNotice(data.session ? "Conta criada com sucesso." : "Cadastro solicitado. Confira seu e-mail para confirmar a conta.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -45,6 +68,7 @@ function CustomerAccount() {
     <p className="mt-3 text-muted-foreground">Entre para acompanhar seus pedidos e atualizar seus dados.</p>
     <form onSubmit={auth} className="mt-6 space-y-4 rounded-xl border border-border bg-card p-6">
       <h2 className="text-xl font-bold">{mode === "login" ? "Entrar" : mode === "register" ? "Criar conta" : "Recuperar senha"}</h2>
+      {mode === "register" && <><label className="block text-sm">Nome completo<input type="text" required minLength={3} maxLength={120} autoComplete="name" value={fullName} onChange={e => setFullName(e.target.value)} className={input}/></label><label className="block text-sm">Telefone com DDD<input type="tel" required minLength={10} maxLength={20} autoComplete="tel" placeholder="(71) 99999-9999" value={phone} onChange={e => setPhone(e.target.value)} className={input}/></label></>}
       <label className="block text-sm">E-mail<input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className={input}/></label>
       {mode !== "reset" && <label className="block text-sm">Senha<input type="password" required minLength={6} autoComplete={mode === "register" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} className={input}/></label>}
       <button type="submit" disabled={busy} className="w-full rounded-lg bg-primary p-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Aguarde..." : mode === "login" ? "Entrar" : mode === "register" ? "Criar conta" : "Enviar recuperação"}</button>
