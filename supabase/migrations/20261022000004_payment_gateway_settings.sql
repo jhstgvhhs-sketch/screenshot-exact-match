@@ -1,7 +1,7 @@
 -- Safe non-secret gateway preferences. API keys belong in Edge Function Secrets, never this table.
 CREATE TABLE IF NOT EXISTS public.payment_gateway_settings (
  id text PRIMARY KEY DEFAULT 'main' CHECK (id = 'main'),
- provider text NOT NULL DEFAULT 'none' CHECK (provider IN ('none','mercadopago','asaas','custom')),
+ provider text NOT NULL DEFAULT 'none' CHECK (provider IN ('none','blackcat','mercadopago','asaas','custom')),
  environment text NOT NULL DEFAULT 'sandbox' CHECK (environment IN ('sandbox','production')),
  pix_enabled boolean NOT NULL DEFAULT false,
  updated_at timestamptz NOT NULL DEFAULT now()
