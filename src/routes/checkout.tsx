@@ -4,6 +4,7 @@ import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
 import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
 import { cardWhatsAppUrl } from "@/lib/checkout";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Finalizar compra — 3DFLEX" }, { name: "description", content: "Confira seu pedido e informe os dados de entrega." }] }),
@@ -19,6 +20,29 @@ function Checkout() {
   const [deliveryData, setDeliveryData] = useState<FormData | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [validated, setValidated] = useState(false);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
+  const [pixData, setPixData] = useState<{ copyPaste: string; qrCodeBase64?: string; orderId: string } | null>(null);
+
+  async function beginPix() {
+    if (!deliveryData || pixLoading || pixData) return;
+    setPixLoading(true);
+    setPixError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Entre na sua conta para finalizar o pedido por Pix.");
+      const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
+      const { data, error } = await supabase.functions.invoke("blackcat-create-pix", {
+        body: { customer, items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })) }
+      });
+      if (error) throw new Error(error.message || "Pix indisponível no momento.");
+      if (!data || typeof data.copyPaste !== "string" || typeof data.orderId !== "string")
+        throw new Error(data?.error || "Não foi possível gerar o Pix. Nenhuma cobrança foi confirmada.");
+      setPixData({ copyPaste: data.copyPaste, qrCodeBase64: data.qrCodeBase64, orderId: data.orderId });
+    } catch (error) {
+      setPixError(error instanceof Error ? error.message : "Erro ao iniciar pagamento.");
+    } finally { setPixLoading(false); }
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,14 +88,16 @@ function Checkout() {
           <legend className="px-2 font-bold">Escolha como pagar</legend>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
             <input type="radio" name="payment" checked={payment === "pix"} onChange={() => { setPayment("pix"); setValidated(false); }} className="mt-1 accent-primary" />
-            <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">Pagamento instantâneo. A cobrança online ainda não está ativada.</span></span>
+            <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">Pagamento instantâneo. Disponível após a validação segura do gateway.</span></span>
           </label>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
             <input type="radio" name="payment" checked={payment === "card"} onChange={() => { setPayment("card"); setValidated(false); }} className="mt-1 accent-primary" />
             <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Continue pelo atendimento para combinar o pagamento.</span></span>
           </label>
         </fieldset>
-        <button type="button" onClick={() => { setWhatsappUrl(payment === "card" && deliveryData ? cardWhatsAppUrl(items, subtotal, deliveryData) : null); setValidated(true); }} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground">Continuar com {payment === "pix" ? "Pix" : "cartão"}</button>
+        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } setWhatsappUrl(deliveryData ? cardWhatsAppUrl(items, subtotal, deliveryData) : null); setValidated(true); }} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground">{pixLoading ? "Preparando Pix..." : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}`}</button>
+        {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
+        {pixData && payment === "pix" && <div className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="font-bold">Pagamento Pix — pedido {pixData.orderId}</h2>{pixData.qrCodeBase64 && <img className="mx-auto h-56 w-56 object-contain" alt="QR Code Pix" src={pixData.qrCodeBase64.startsWith("data:") ? pixData.qrCodeBase64 : `data:image/png;base64,${pixData.qrCodeBase64}`} />}<label className="block text-sm">Pix copia e cola<textarea className="mt-2 w-full rounded-lg border bg-background p-3" readOnly rows={3} value={pixData.copyPaste}/></label><button type="button" className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={() => void navigator.clipboard.writeText(pixData.copyPaste)}>Copiar código Pix</button><p className="text-sm text-muted-foreground">Aguarde a confirmação do pagamento. Não faça um novo pedido enquanto este estiver pendente.</p></div>}
         {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">{payment === "pix" ? "O Pix ainda não está disponível para cobrança online. Nenhum pedido foi criado ou cobrado." : whatsappUrl ? "Continue pelo WhatsApp para solicitar o pagamento por cartão. Nenhum pedido foi criado ou cobrado." : "Atendimento por WhatsApp ainda não configurado. Nenhum pedido foi criado ou cobrado."}</p>}
         {validated && whatsappUrl && payment === "card" && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
         <button type="button" onClick={() => { setStep("details"); setValidated(false); setWhatsappUrl(null); }} className="text-sm font-semibold text-primary underline">Voltar aos dados de entrega</button>
