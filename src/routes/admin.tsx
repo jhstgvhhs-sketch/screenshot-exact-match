@@ -4,7 +4,7 @@ import type { Product } from "@/lib/catalog";
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { productsQuery, totalStock } from "@/lib/catalog";
+import { productsQuery, categoriesQuery, totalStock } from "@/lib/catalog";
 import { brl } from "@/lib/store";
 
 export const Route = createFileRoute("/admin")({
@@ -25,6 +25,7 @@ function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [message, setMessage] = useState("");
+  const { data: categories = [] } = useQuery({ ...categoriesQuery(), enabled: !!user && isAdmin && !loading });
   const { data: products = [], isLoading: productsLoading } = useQuery({
     ...productsQuery(),
     enabled: !!user && isAdmin && !loading,
@@ -41,6 +42,7 @@ function AdminPage() {
   });
   const refreshCatalog = () => {
     void queryClient.invalidateQueries({ queryKey: ["products"] });
+    void queryClient.invalidateQueries({ queryKey: ["categories"] });
     void queryClient.invalidateQueries({ queryKey: ["admin-inactive-products"] });
   };
 
@@ -110,7 +112,8 @@ function AdminPage() {
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Variantes</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + p.product_variants.length, 0)}</p></div>
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Unidades em estoque</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + totalStock(p), 0)}</p></div>
       </div>
-      <NewProductForm onSaved={refreshCatalog} />
+      <CategoryManager categories={categories} onSaved={refreshCatalog} />
+      <NewProductForm categories={categories} onSaved={refreshCatalog} />
       <h2 className="mt-10 text-xl font-bold">Produtos aguardando publicação</h2>
       {inactiveLoading && <p className="mt-3">Carregando rascunhos...</p>}
       <div className="mt-4 space-y-4">{inactiveProducts.map(p => <DraftProductEditor key={p.id} product={p} onSaved={refreshCatalog} />)}</div>
@@ -149,13 +152,15 @@ function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => 
 }
 
 type EditableProduct = {
-  id: string; name: string; slug: string; brand: string | null; material: string | null;
+  id: string; name: string; slug: string; category_id: string | null; brand: string | null; material: string | null;
   weight: string | null; diameter: string | null; description: string | null;
   price: number; images: string[];
   product_variants: { id: string; color: string; color_hex: string | null; sku: string; stock: number; sort: number }[];
 };
 
 function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onSaved: () => void }) {
+  const { data: categories = [] } = useQuery(categoriesQuery());
+  const [categoryId, setCategoryId] = useState(product.category_id ?? "");
   const variants = [...product.product_variants].sort((a,b) => a.sort - b.sort);
   const [fields, setFields] = useState({
     name: product.name, slug: product.slug, brand: product.brand ?? "",
@@ -192,7 +197,7 @@ function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onS
         name: fields.name.trim(), slug: fields.slug.trim(), brand: fields.brand.trim() || null,
         material: fields.material.trim() || null, weight: fields.weight.trim() || null,
         diameter: fields.diameter.trim() || null, description: fields.description.trim() || null,
-        price, images: images.map(s => s.trim()),
+        price, category_id: categoryId || null, images: images.map(s => s.trim()),
       }).eq("id", product.id).select("id").single();
       if (error) throw error;
       if (!data) throw new Error("O banco não confirmou a edição do produto.");
@@ -222,6 +227,7 @@ function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onS
         </label>
       )}
     </div>
+    <label className="block text-sm font-semibold">Categoria<select value={categoryId} onChange={e => setCategoryId(e.target.value)} className={inputClass}><option value="">Sem categoria</option>{categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</select></label>
     <label className="block text-sm font-semibold">Descrição<textarea rows={3} value={fields.description} onChange={e => setField("description",e.target.value)} className={inputClass}/></label>
     <h4 className="font-semibold">Imagens do produto</h4>
     <label className="block text-sm">Foto principal (URL HTTPS)<input type="url" value={images[0]} onChange={e => setImage(0,e.target.value)} className={inputClass}/></label>
@@ -249,13 +255,14 @@ const PETG_COLORS = [
   "Cool Grey", "Green Olive",
 ];
 
-function NewProductForm({ onSaved }: { onSaved: () => void }) {
+function NewProductForm({ categories, onSaved }: { categories: CategoryItem[]; onSaved: () => void }) {
   const [name, setName] = useState("Filamento PETG MasterPrint 1kg — 1,75mm");
   const [slug, setSlug] = useState("filamento-petg-masterprint-1kg");
   const [price, setPrice] = useState("69,90");
   const [description, setDescription] = useState("Filamento PETG MasterPrint para impressão 3D. Bobina de 1 kg, diâmetro de 1,75 mm.");
   const [colors, setColors] = useState(PETG_COLORS.join("\n"));
   const [imageUrl, setImageUrl] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
   async function create(e: FormEvent<HTMLFormElement>) {
@@ -273,7 +280,7 @@ function NewProductForm({ onSaved }: { onSaved: () => void }) {
       const { data: product, error } = await supabase.from("products").insert({
         name: name.trim(), slug, price: value, brand: "MasterPrint", material: "PETG",
         weight: "1kg", diameter: "1,75mm", description: description.trim(),
-        images: imageUrl.trim() ? [imageUrl.trim()] : [], active: false, featured: false,
+        images: imageUrl.trim() ? [imageUrl.trim()] : [], category_id: categoryId || null, active: false, featured: false,
       }).select("id").single();
       if (error) throw error;
       if (!product) throw new Error("O banco não confirmou o cadastro do produto.");
@@ -297,6 +304,7 @@ function NewProductForm({ onSaved }: { onSaved: () => void }) {
       <label className="text-sm font-semibold">Preço (R$)<input required inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" /></label>
       <label className="text-sm font-semibold">URL da foto principal (opcional)<input type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="mt-2 w-full rounded-lg border border-input bg-background p-3" /></label>
     </div>
+    <label className="mt-4 block text-sm font-semibold">Categoria<select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3"><option value="">Sem categoria</option>{categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</select></label>
     <label className="mt-4 block text-sm font-semibold">Descrição<textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" /></label>
     <label className="mt-4 block text-sm font-semibold">Cores (uma por linha)<textarea required rows={9} value={colors} onChange={e => setColors(e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" /></label>
     <p className="mt-2 text-sm text-muted-foreground">Estoque inicial: 1 unidade por cor. Não inclui bobina de 5 kg.</p>
@@ -391,4 +399,46 @@ function DeleteProductButton({ id, name, onDeleted }: { id: string; name: string
     </div>}
     {errorMessage && <p role="alert" className="mt-3 text-sm text-destructive">{errorMessage}</p>}
   </div>;
+}
+
+type CategoryItem = { id: string; name: string; slug: string; sort: number; description: string | null };
+const DEFAULT_CATEGORIES = [
+  { name: "Filamentos", slug: "filamentos", description: "Filamentos PLA, PETG e outros materiais para impressão 3D" },
+  { name: "Impressoras", slug: "impressoras", description: "Impressoras 3D e equipamentos" },
+  { name: "Acessórios", slug: "acessorios", description: "Peças, ferramentas e acessórios para impressão 3D" },
+];
+function CategoryManager({ categories, onSaved }: { categories: CategoryItem[]; onSaved: () => void }) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  async function insertCategories(items: { name: string; slug: string; description?: string }[]) {
+    setBusy(true); setFeedback("");
+    try {
+      let created = 0;
+      for (const item of items) {
+        if (categories.some(c => c.slug === item.slug)) continue;
+        const { error } = await supabase.from("categories").insert({
+          name: item.name, slug: item.slug, description: item.description ?? null, sort: categories.length + created,
+        });
+        if (error) throw error;
+        created++;
+      }
+      setFeedback(created ? created + " categoria(s) criada(s) no banco." : "Essas categorias já existem.");
+      setName(""); setSlug(""); onSaved();
+    } catch (err) { setFeedback(err instanceof Error ? err.message : "Não foi possível salvar as categorias."); onSaved(); }
+    finally { setBusy(false); }
+  }
+  return <section className="mt-10 rounded-xl border border-border bg-card p-5">
+    <h2 className="text-xl font-bold">Categorias da loja</h2>
+    <p className="mt-2 text-sm text-muted-foreground">Organize seus produtos em Filamentos, Impressoras e Acessórios. Nenhum produto existente será excluído.</p>
+    <div className="mt-4 flex flex-wrap gap-2">{categories.map(cat => <span key={cat.id} className="rounded-lg border border-border px-3 py-2 text-sm">{cat.name}</span>)}</div>
+    <button type="button" disabled={busy} onClick={() => void insertCategories(DEFAULT_CATEGORIES)} className="mt-4 rounded-lg bg-primary px-4 py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Salvando..." : "Criar categorias padrão"}</button>
+    <form className="mt-5 grid gap-3 sm:grid-cols-3" onSubmit={e => { e.preventDefault(); if (!name.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) { setFeedback("Preencha o nome e um identificador válido."); return; } void insertCategories([{ name: name.trim(), slug }]); }}>
+      <input aria-label="Nome da categoria" placeholder="Nome da categoria" value={name} onChange={e => setName(e.target.value)} className="rounded-lg border border-input bg-background p-3" />
+      <input aria-label="Identificador da categoria" placeholder="identificador-sem-acentos" value={slug} onChange={e => setSlug(e.target.value)} className="rounded-lg border border-input bg-background p-3" />
+      <button type="submit" disabled={busy} className="rounded-lg border border-primary px-4 py-3 font-semibold text-primary disabled:opacity-50">Adicionar categoria</button>
+    </form>
+    {feedback && <p role="status" className="mt-3 text-sm">{feedback}</p>}
+  </section>;
 }
