@@ -88,7 +88,7 @@ function ProdutoPage() {
             <input value={cep} onChange={(e) => setCep(maskCep(e.target.value))} placeholder="00000-000" aria-label="CEP" className="h-10 flex-1 rounded-lg border border-input bg-background px-3" />
             <Button type="submit">Consultar CEP</Button>
           </div>
-          {addr && <p className="mt-3 text-sm">{addr.street}, {addr.district} — {addr.city}/{addr.state}<br /><span className="text-muted-foreground">Frete fixo: {brl(FIXED_SHIPPING_BRL)} para todo o Brasil.</span></p>}
+          {addr && <p className="mt-3 text-sm">{addr.street}, {addr.district} — {addr.city}/{addr.state}<br /><span className="text-muted-foreground">Frete fixo: {brl(FIXED_SHIPPING_BRL)}. Grátis acima de R$ 600,00 no Pix.</span></p>}
         </form>
       </div>
     </section><ProductReviews productId={p.id} /></>
