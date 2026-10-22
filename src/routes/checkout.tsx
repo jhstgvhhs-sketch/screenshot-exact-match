@@ -43,6 +43,7 @@ function Checkout() {
             <label className="space-y-1 text-sm">Nome completo<input name="name" required autoComplete="name" maxLength={120} className={fieldClass}/></label>
             <label className="space-y-1 text-sm">E-mail<input name="email" required type="email" autoComplete="email" maxLength={160} className={fieldClass}/></label>
             <label className="space-y-1 text-sm">Telefone com DDD<input name="phone" required type="tel" autoComplete="tel" minLength={10} maxLength={20} className={fieldClass}/></label>
+            <label className="space-y-1 text-sm">CPF para emissão da cobrança<input name="cpf" required inputMode="numeric" autoComplete="off" pattern="[0-9]{11}" title="Digite os 11 números do CPF, sem pontos ou traços" maxLength={11} className={fieldClass}/></label>
             <label className="space-y-1 text-sm">CEP<input name="cep" required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{5}-?[0-9]{3}" title="Digite 8 números, com ou sem hífen" className={fieldClass}/></label>
           </div>
         </fieldset>
