@@ -184,6 +184,7 @@ function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onS
   const setImage = (index: number, value: string) => setImages(prev => prev.map((s,i) => i === index ? value : s));
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!window.confirm("Confirmar as alterações deste produto? As informações serão atualizadas na loja após salvar.")) return;
     const price = Number(fields.price.replace(",", "."));
     if (!fields.name.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fields.slug.trim()) || !/^\d+([.,]\d{1,2})?$/.test(fields.price.trim()) || !Number.isFinite(price) || price <= 0) {
       setFeedback("Revise o nome, identificador e preço."); return;
@@ -248,7 +249,7 @@ function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onS
       {images[i+1] && <img src={images[i+1]} alt={variantFields[v.id].color} className="mt-2 size-20 rounded border border-border object-cover" />}
     </div>)}</div>
     {feedback && <p role="status" className="text-sm">{feedback}</p>}
-    <button disabled={saving} type="submit" className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{saving ? "Salvando..." : "Salvar alterações do produto"}</button>
+    <button disabled={saving} type="submit" className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{saving ? "Salvando..." : "Confirmar e salvar alterações"}</button>
   </form>;
 }
 
@@ -329,6 +330,7 @@ function DraftProductEditor({ product, onSaved }: {
   const [feedback, setFeedback] = useState("");
   const validUrl = (s: string) => { try { const u = new URL(s); return u.protocol === "https:"; } catch { return false; } };
   async function save(publish: boolean) {
+    if (!window.confirm(publish ? "Confirmar a publicação deste produto na loja?" : "Confirmar o salvamento das fotos deste produto?")) return;
     const urls = [mainImage.trim(), ...variants.map(v => (colorImages[v.id] ?? "").trim())];
     if (urls.some(u => u && !validUrl(u))) { setFeedback("Use links de imagens HTTPS válidos."); return; }
     if (publish && urls.some(u => !u)) { setFeedback("Adicione a foto principal e uma foto para cada cor antes de publicar."); return; }
