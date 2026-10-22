@@ -27,7 +27,22 @@ Deno.serve(async (request) => {
   // A live payment implementation must create the order atomically, calculate the amount
   // server-side, and record the gateway transaction before accepting webhooks.
   // Until those invariants are implemented and tested, fail closed.
+  const admin = createClient(url, serviceKey);
+  const payload = await request.json().catch(() => null);
+  const customer = payload?.customer;
+  const items = payload?.items;
+  if (!Array.isArray(items) || !items.length || items.length > 30 ||
+      items.some((item: { variant_id?: string; quantity?: number }) =>
+        typeof item.variant_id !== "string" || item.quantity !== 1) ||
+      !customer || !/^[0-9]{11}$/.test(String(customer.cpf ?? ""))) {
+    return json({ error: "Dados do pedido inválidos" }, 400);
+  }
+  const { data: orderId, error: orderError } = await userClient.rpc("place_order", {
+    _items: items, _customer: customer, _coupon: "", _method: "pix"
+  });
+  if (orderError || !orderId) return json({ error: orderError?.message ?? "Falha ao criar pedido" }, 409);
+  const { data: order } = await admin.from("orders").select("id,total,user_id").eq("id", orderId).eq("user_id", user.id).single();
+  if (!order) return json({ error: "Pedido não encontrado", orderId }, 500);
   void createBlackcatPix;
-  void serviceKey;
-  return json({ error: "Integração Pix ainda não liberada para cobranças reais." }, 503);
+  return json({ error: "Cobrança pendente de validação do gateway", orderId }, 503);
 });
