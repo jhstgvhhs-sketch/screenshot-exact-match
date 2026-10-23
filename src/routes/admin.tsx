@@ -159,7 +159,7 @@ function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => 
         <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
       </div>
     </div>
-    {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />
+    {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />}
   </div>;
 }
 
