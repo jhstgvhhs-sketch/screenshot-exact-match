@@ -154,10 +154,12 @@ function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => 
   return <div className="rounded-xl border border-border bg-card p-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h3 className="text-lg font-bold">{product.name}</h3>
-      <button type="button" onClick={() => setEditing(x => !x)} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary">{editing ? "Fechar edição" : "Editar produto"}</button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setEditing(x => !x)} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary">{editing ? "Fechar edição" : "Editar produto"}</button>
+        <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
+      </div>
     </div>
-    {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />}
-    <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
+    {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />
   </div>;
 }
 
@@ -399,7 +401,7 @@ function DeleteProductButton({ id, name, onDeleted }: { id: string; name: string
       setErrorMessage((err instanceof Error ? err.message : "Falha ao excluir.") + " Se o banco bloquear por vínculos de cores, será necessária uma exclusão transacional segura no Lovable Cloud.");
     } finally { setDeleting(false); }
   }
-  return <div className="mt-6 border-t border-border pt-4">
+  return <div className={confirming ? "w-full space-y-3 rounded-lg border border-destructive/40 p-3" : ""}>
     {!confirming ? <button type="button" onClick={() => setConfirming(true)} className="rounded-lg border border-destructive px-4 py-2 text-sm font-semibold text-destructive">Excluir somente este produto</button> : <div className="space-y-3">
       <p className="text-sm font-semibold text-destructive">Você está excluindo SOMENTE o produto abaixo, não o catálogo inteiro. Todas as cores vinculadas a este cadastro também poderão ser removidas. Digite o nome completo para confirmar:</p>
       <p className="break-words text-sm">{name}</p>
