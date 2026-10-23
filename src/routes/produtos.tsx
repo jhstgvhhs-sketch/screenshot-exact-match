@@ -32,7 +32,7 @@ function Produtos() {
       <h1 className="text-3xl font-bold">{categoria ? categoria.toUpperCase() : "Todos os produtos"}</h1>
       {q && <p className="mt-1 text-muted-foreground">Busca: “{q}”</p>}
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {list.map((p) => <ProductCard key={p.id} p={p} />)}
+        {list.flatMap(p => p.product_variants.length ? p.product_variants.filter(v => !q || `${p.name} ${p.brand} ${v.color}`.toLowerCase().includes(q.toLowerCase())).map(v => <ProductCard key={v.id} p={p} variant={v} />) : [<ProductCard key={p.id} p={p} />])}
       </div>
       {!isLoading && list.length === 0 && <p className="mt-6 text-muted-foreground">Nenhum produto encontrado.</p>}
     </section>
