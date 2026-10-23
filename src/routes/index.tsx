@@ -31,8 +31,8 @@ function Index() {
   const { data: products = [] } = useQuery(productsQuery());
   const { data: categories = [] } = useQuery(categoriesQuery());
   const featured = products.filter((p) => p.featured);
-  const cards = (featured.length ? featured : products).flatMap(p => p.product_variants.length ? p.product_variants.map(v => ({ p, v })) : [{ p, v: undefined }]);
-  const newCards = products.flatMap(p => p.product_variants.length ? p.product_variants.map(v => ({ p, v })) : [{ p, v: undefined }]);
+  const cards = (featured.length ? featured : products).flatMap(p => p.product_variants.length ? p.product_variants.map(v => ({ p, v: v as (typeof p.product_variants)[number] | undefined })) : [{ p, v: undefined as (typeof p.product_variants)[number] | undefined }]);
+  const newCards = products.flatMap(p => p.product_variants.length ? p.product_variants.map(v => ({ p, v: v as (typeof p.product_variants)[number] | undefined })) : [{ p, v: undefined as (typeof p.product_variants)[number] | undefined }]);
 
   return (
     <>

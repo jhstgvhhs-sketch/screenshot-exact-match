@@ -159,7 +159,7 @@ function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => 
         <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
       </div>
     </div>
-    {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />
+    {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />}
   </div>;
 }
 
@@ -369,7 +369,7 @@ function DraftProductEditor({ product, onSaved }: {
       <button type="button" disabled={busy} onClick={() => void save(false)} className="rounded-lg border border-input px-5 py-3 font-semibold disabled:opacity-50">{busy ? "Aguarde..." : "Salvar fotos"}</button>
       <button type="button" disabled={busy} onClick={() => void save(true)} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">Publicar produto</button>
     </div>
-    <details className="mt-5"><summary className="cursor-pointer font-semibold text-primary">Editar informações, preço, cores e estoque</summary><CatalogEditFields product={{ ...product, price: Number(product.price) }} onSaved={onSaved} /></details>
+    <details className="mt-5"><summary className="cursor-pointer font-semibold text-primary">Editar informações, preço, cores e estoque</summary><CatalogEditFields product={{ ...(product as unknown as EditableProduct), price: Number((product as unknown as EditableProduct).price) }} onSaved={onSaved} /></details>
     <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
   </div>;
 }

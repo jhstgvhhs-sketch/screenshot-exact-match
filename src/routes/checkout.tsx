@@ -61,7 +61,7 @@ function Checkout() {
       const { data, error } = await supabase.rpc("place_order", {
         _items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })),
         _customer: customer,
-        _coupon: null,
+        _coupon: null as unknown as string,
         _method: "cartao",
       });
       if (error) throw error;

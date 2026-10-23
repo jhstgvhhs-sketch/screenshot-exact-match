@@ -96,7 +96,7 @@ function CustomerProfile({ userId }: { userId: string }) {
   const { data, isLoading, error } = useQuery({ queryKey: ["customer-profile",userId], queryFn: async () => { const r = await supabase.from("profiles").select("full_name,phone,cpf").eq("id",userId).maybeSingle(); if(r.error) throw r.error; return r.data; } });
   if (isLoading) return <p className="mt-6">Carregando seus dados...</p>;
   if (error) return <p className="mt-6 text-destructive">Não foi possível carregar os dados.</p>;
-  return <ProfileForm key={JSON.stringify(data)} userId={userId} initial={data} onSaved={() => void qc.invalidateQueries({queryKey:["customer-profile",userId]})}/>;
+  return <ProfileForm key={JSON.stringify(data)} userId={userId} initial={data ?? null} onSaved={() => void qc.invalidateQueries({queryKey:["customer-profile",userId]})}/>;
 }
 function ProfileForm({userId,initial,onSaved}:{userId:string;initial:{full_name:string|null;phone:string|null;cpf:string|null}|null;onSaved:()=>void}) {
   const [name,setName]=useState(initial?.full_name??"");
