@@ -14,8 +14,10 @@ export function blackcatPixPayload(order: Order, lines: Line[], orderId: string,
   const shipping = cents(order.shipping);
   const cpf = digits(order.customer_cpf);
   if (!/^\d{11}$/.test(cpf)) throw new Error("CPF inválido");
-  if (!Number.isSafeInteger(amount) || amount <= 0 || shipping !== 3780 || !lines.length)
+  if (!Number.isSafeInteger(amount) || amount <= 0 || (shipping !== 3780 && shipping !== 0) || !lines.length)
     throw new Error("Total ou frete inválido");
+  const subtotal = lines.reduce((sum, line) => sum + cents(line.unit_price) * line.quantity, 0);
+  if (shipping === 0 && subtotal <= 60000) throw new Error("Frete grátis Pix exige subtotal superior a R$ 600");
   const items = lines.map(line => {
     const unitPrice = cents(line.unit_price);
     if (!Number.isSafeInteger(unitPrice) || unitPrice < 0 || !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 10)
@@ -26,7 +28,7 @@ export function blackcatPixPayload(order: Order, lines: Line[], orderId: string,
     throw new Error("Total não corresponde aos itens e frete");
   return {
     amount, currency: "BRL", paymentMethod: "pix", externalRef: orderId, postbackUrl,
-    items: [...items, { title: "Frete", quantity: 1, unitPrice: shipping, tangible: false }],
+    items: shipping > 0 ? [...items, { title: "Frete", quantity: 1, unitPrice: shipping, tangible: false }] : items,
     customer: { name: order.customer_name, email: order.customer_email,
       phone: digits(order.customer_phone), document: { number: cpf, type: "cpf" } },
     shipping: { name: order.customer_name, street: order.ship_street,
