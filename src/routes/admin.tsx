@@ -156,7 +156,6 @@ function ProductEditor({ product, onSaved }: { product: Product; onSaved: () => 
       <h3 className="text-lg font-bold">{product.name}</h3>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setEditing(x => !x)} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary">{editing ? "Fechar edição" : "Editar produto"}</button>
-        <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
       </div>
     </div>
     {editing && <CatalogEditFields key={product.id} product={product} onSaved={onSaved} />}
@@ -231,6 +230,29 @@ function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onS
       onSaved();
     } finally { setSaving(false); }
   }
+  async function removeVariant(v: EditableProduct["product_variants"][number], index: number) {
+    if (saving) return;
+    if (variants.length <= 1) { setFeedback("Não é possível excluir a última cor. Mantenha pelo menos uma variante."); return; }
+    if (!window.confirm(`Excluir somente a cor "${v.color}" de "${product.name}"? As demais cores serão preservadas. Esta ação não pode ser desfeita.`)) return;
+    setSaving(true); setFeedback("");
+    try {
+      const { data: linked, error: linkedError } = await supabase.from("order_items").select("id").eq("variant_id", v.id).limit(1);
+      if (linkedError) throw linkedError;
+      if (linked?.length) throw new Error("Esta cor está vinculada a um pedido e não pode ser excluída. Preserve o histórico de vendas.");
+      const { data: removed, error: removeError } = await supabase.from("product_variants").delete().eq("id", v.id).eq("product_id", product.id).select("id").single();
+      if (removeError) throw removeError;
+      if (!removed) throw new Error("O banco não confirmou a exclusão desta cor.");
+      const nextImages = [...(product.images ?? [])];
+      if (index + 1 < nextImages.length) nextImages.splice(index + 1, 1);
+      const { error: imageError } = await supabase.from("products").update({ images: nextImages }).eq("id", product.id);
+      if (imageError) throw new Error("A cor foi excluída, mas não foi possível reorganizar as imagens: " + imageError.message);
+      setFeedback(`Cor "${v.color}" excluída. As outras cores foram mantidas.`);
+      onSaved();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Não foi possível excluir esta cor.");
+      onSaved();
+    } finally { setSaving(false); }
+  }
   const inputClass = "mt-1 w-full rounded-lg border border-input bg-background p-2";
   return <form onSubmit={save} className="mt-5 space-y-4 border-t border-border pt-5">
     <div className="grid gap-3 sm:grid-cols-2">
@@ -247,6 +269,7 @@ function CatalogEditFields({ product, onSaved }: { product: EditableProduct; onS
     <h4 className="font-semibold">Editar cores, estoque e fotos</h4>
     <p className="text-xs text-muted-foreground">As cores existentes são editadas no próprio registro, sem excluir variantes. A imagem de cada cor segue a ordem original das variantes.</p>
     <div className="grid gap-4 md:grid-cols-2">{variants.map((v,i) => <div key={v.id} className="rounded-lg border border-border p-3">
+      <div className="mb-3 flex items-center justify-between gap-2"><span className="font-semibold">{v.color}</span><button type="button" disabled={saving || variants.length <= 1} onClick={() => void removeVariant(v,i)} className="rounded-lg border border-destructive px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50" aria-label={`Excluir somente a cor ${v.color}`}>Excluir esta cor</button></div>
       <div className="grid gap-2 sm:grid-cols-2">
         {(["color","sku","stock","color_hex"] as const).map(key => <label key={key} className="text-xs font-semibold">{({color:"Nome da cor",sku:"SKU",stock:"Estoque",color_hex:"Cor hexadecimal (opcional)"})[key]}
           <input value={variantFields[v.id][key]} onChange={e => setVariant(v.id,key,e.target.value)} className={inputClass} />
@@ -370,48 +393,6 @@ function DraftProductEditor({ product, onSaved }: {
       <button type="button" disabled={busy} onClick={() => void save(true)} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">Publicar produto</button>
     </div>
     <details className="mt-5"><summary className="cursor-pointer font-semibold text-primary">Editar informações, preço, cores e estoque</summary><CatalogEditFields product={{ ...(product as unknown as EditableProduct), price: Number((product as unknown as EditableProduct).price) }} onSaved={onSaved} /></details>
-    <DeleteProductButton id={product.id} name={product.name} onDeleted={onSaved} />
-  </div>;
-}
-
-function DeleteProductButton({ id, name, onDeleted }: { id: string; name: string; onDeleted: () => void }) {
-  const [confirming, setConfirming] = useState(false);
-  const [typed, setTyped] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  async function remove() {
-    if (typed.trim() !== name) return;
-    setDeleting(true); setErrorMessage("");
-    try {
-      // Preserve order history: reject removal when any order item references a variant.
-      const { data: variants, error: variantsError } = await supabase.from("product_variants").select("id").eq("product_id", id);
-      if (variantsError) throw variantsError;
-      if (variants?.length) {
-        const { data: items, error: itemsError } = await supabase.from("order_items").select("id").in("variant_id", variants.map(v => v.id)).limit(1);
-        if (itemsError) throw itemsError;
-        if (items?.length) throw new Error("Este produto já possui itens em pedidos e não pode ser excluído. Desative-o para preservar o histórico.");
-      }
-      // Deleting the parent is safe only when the database's FK policy permits it.
-      const { data, error } = await supabase.from("products").delete().eq("id", id).select("id").single();
-      if (error) throw error;
-      if (!data) throw new Error("O banco não confirmou a exclusão.");
-      setConfirming(false); setTyped("");
-      onDeleted();
-    } catch (err) {
-      setErrorMessage((err instanceof Error ? err.message : "Falha ao excluir.") + " Se o banco bloquear por vínculos de cores, será necessária uma exclusão transacional segura no Lovable Cloud.");
-    } finally { setDeleting(false); }
-  }
-  return <div className={confirming ? "w-full space-y-3 rounded-lg border border-destructive/40 p-3" : ""}>
-    {!confirming ? <button type="button" onClick={() => setConfirming(true)} className="rounded-lg border border-destructive px-4 py-2 text-sm font-semibold text-destructive">Excluir somente este produto</button> : <div className="space-y-3">
-      <p className="text-sm font-semibold text-destructive">Você está excluindo SOMENTE o produto abaixo, não o catálogo inteiro. Todas as cores vinculadas a este cadastro também poderão ser removidas. Digite o nome completo para confirmar:</p>
-      <p className="break-words text-sm">{name}</p>
-      <input aria-label="Confirme o nome do produto" value={typed} onChange={e => setTyped(e.target.value)} className="w-full rounded-lg border border-input bg-background p-3" />
-      <div className="flex flex-wrap gap-3">
-        <button type="button" disabled={deleting || typed.trim() !== name} onClick={() => void remove()} className="rounded-lg bg-destructive px-4 py-2 font-bold text-destructive-foreground disabled:opacity-50">{deleting ? "Excluindo..." : "Excluir permanentemente"}</button>
-        <button type="button" disabled={deleting} onClick={() => { setConfirming(false); setTyped(""); setErrorMessage(""); }} className="rounded-lg border border-input px-4 py-2">Cancelar</button>
-      </div>
-    </div>}
-    {errorMessage && <p role="alert" className="mt-3 text-sm text-destructive">{errorMessage}</p>}
   </div>;
 }
 
