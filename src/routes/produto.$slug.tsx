@@ -11,6 +11,7 @@ import { brl, lookupCep, maskCep, type CepAddress } from "@/lib/store";
 import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
 
 export const Route = createFileRoute("/produto/$slug")({
+  validateSearch: (s: Record<string, unknown>): { cor?: string } => ({ cor: typeof s.cor === "string" ? s.cor : undefined }),
   head: () => ({
     meta: [
       { title: "Produto — 3DFLEX" },
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/produto/$slug")({
 
 function ProdutoPage() {
   const { slug } = Route.useParams();
+  const { cor } = Route.useSearch();
   const { data: p, isLoading } = useQuery(productQuery(slug));
   const cart = useCart();
   const nav = useNavigate();
@@ -34,8 +36,9 @@ function ProdutoPage() {
 
   if (isLoading) return <p className="container-x py-10">Carregando...</p>;
   if (!p) return <p className="container-x py-10">Produto não encontrado.</p>;
-  const v = p.product_variants.find((x) => x.id === vid);
-  const selectedIndex = p.product_variants.findIndex(x => x.id === vid);
+  const selectedVariantId = vid ?? cor;
+  const v = p.product_variants.find((x) => x.id === selectedVariantId);
+  const selectedIndex = p.product_variants.findIndex(x => x.id === selectedVariantId);
   const selectedImage = selectedIndex >= 0 ? (p.images?.[selectedIndex + 1] || productImage(p)) : productImage(p);
 
   const limit = v ? quantityLimit({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, quantity: 1, stock: v.stock }) : 1;
@@ -67,7 +70,7 @@ function ProdutoPage() {
           <div className="flex flex-wrap gap-2">
             {p.product_variants.map((x) => (
               <button key={x.id} onClick={() => { setVid(x.id); setQty(1); }} title={x.color} aria-label={x.color}
-                className={`size-9 rounded-full border-2 ${vid === x.id ? "border-primary" : "border-border"}`}
+                className={`size-9 rounded-full border-2 ${selectedVariantId === x.id ? "border-primary" : "border-border"}`}
                 style={{ background: x.color_hex ?? undefined }} />
             ))}
           </div>
