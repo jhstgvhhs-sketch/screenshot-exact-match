@@ -400,8 +400,8 @@ function DeleteProductButton({ id, name, onDeleted }: { id: string; name: string
     } finally { setDeleting(false); }
   }
   return <div className="mt-6 border-t border-border pt-4">
-    {!confirming ? <button type="button" onClick={() => setConfirming(true)} className="rounded-lg border border-destructive px-4 py-2 text-sm font-semibold text-destructive">Excluir produto</button> : <div className="space-y-3">
-      <p className="text-sm font-semibold text-destructive">Exclusão permanente. Digite o nome completo do produto para confirmar:</p>
+    {!confirming ? <button type="button" onClick={() => setConfirming(true)} className="rounded-lg border border-destructive px-4 py-2 text-sm font-semibold text-destructive">Excluir somente este produto</button> : <div className="space-y-3">
+      <p className="text-sm font-semibold text-destructive">Você está excluindo SOMENTE o produto abaixo, não o catálogo inteiro. Todas as cores vinculadas a este cadastro também poderão ser removidas. Digite o nome completo para confirmar:</p>
       <p className="break-words text-sm">{name}</p>
       <input aria-label="Confirme o nome do produto" value={typed} onChange={e => setTyped(e.target.value)} className="w-full rounded-lg border border-input bg-background p-3" />
       <div className="flex flex-wrap gap-3">
