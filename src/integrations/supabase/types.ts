@@ -118,6 +118,7 @@ export type Database = {
           product_id: string | null
           product_name: string
           quantity: number
+          reserved_stock: number | null
           sku: string
           unit_price: number
           variant_id: string | null
@@ -129,6 +130,7 @@ export type Database = {
           product_id?: string | null
           product_name: string
           quantity: number
+          reserved_stock?: number | null
           sku: string
           unit_price: number
           variant_id?: string | null
@@ -140,6 +142,7 @@ export type Database = {
           product_id?: string | null
           product_name?: string
           quantity?: number
+          reserved_stock?: number | null
           sku?: string
           unit_price?: number
           variant_id?: string | null
@@ -156,6 +159,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          archived_at: string | null
           coupon_code: string | null
           created_at: string
           customer_cpf: string | null
@@ -181,6 +185,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           coupon_code?: string | null
           created_at?: string
           customer_cpf?: string | null
@@ -206,6 +211,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           coupon_code?: string | null
           created_at?: string
           customer_cpf?: string | null
@@ -231,6 +237,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pix_transactions: {
+        Row: {
+          amount_cents: number
+          copy_paste: string | null
+          created_at: string
+          order_id: string
+          qr_code_base64: string | null
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          amount_cents: number
+          copy_paste?: string | null
+          created_at?: string
+          order_id: string
+          qr_code_base64?: string | null
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          amount_cents?: number
+          copy_paste?: string | null
+          created_at?: string
+          order_id?: string
+          qr_code_base64?: string | null
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_variants: {
         Row: {
@@ -353,6 +397,51 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          about: string
+          address: string
+          banner_url: string
+          business_name: string
+          cnpj: string
+          email: string
+          id: string
+          legal_name: string
+          logo_url: string
+          phone: string
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          about?: string
+          address?: string
+          banner_url?: string
+          business_name?: string
+          cnpj?: string
+          email?: string
+          id?: string
+          legal_name?: string
+          logo_url?: string
+          phone?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Update: {
+          about?: string
+          address?: string
+          banner_url?: string
+          business_name?: string
+          cnpj?: string
+          email?: string
+          id?: string
+          legal_name?: string
+          logo_url?: string
+          phone?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -376,6 +465,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_order_admin: { Args: { p_order_id: string }; Returns: boolean }
       check_coupon: { Args: { _code: string }; Returns: Json }
       has_role: {
         Args: {
@@ -390,6 +480,19 @@ export type Database = {
           _customer: Json
           _items: Json
           _method: string
+        }
+        Returns: string
+      }
+      release_unpaid_order_stock: {
+        Args: { p_order_id: string; p_payment_status?: string }
+        Returns: boolean
+      }
+      settle_pix_order: {
+        Args: {
+          p_amount_cents: number
+          p_gateway_status: string
+          p_order_id: string
+          p_transaction_id: string
         }
         Returns: string
       }
