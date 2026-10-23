@@ -31,6 +31,8 @@ function Index() {
   const { data: products = [] } = useQuery(productsQuery());
   const { data: categories = [] } = useQuery(categoriesQuery());
   const featured = products.filter((p) => p.featured);
+  const cards = (featured.length ? featured : products).flatMap(p => p.product_variants.length ? p.product_variants.map(v => ({ p, v })) : [{ p, v: undefined }]);
+  const newCards = products.flatMap(p => p.product_variants.length ? p.product_variants.map(v => ({ p, v })) : [{ p, v: undefined }]);
 
   return (
     <>
@@ -69,14 +71,14 @@ function Index() {
           <Link to="/produtos" className="text-sm font-semibold text-primary">Ver tudo</Link>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {(featured.length ? featured : products).slice(0, 8).map((p) => <ProductCard key={p.id} p={p} />)}
+          {cards.slice(0, 8).map(({ p, v }) => <ProductCard key={v?.id ?? p.id} p={p} variant={v} />)}
         </div>
       </section>
 
       <section className="container-x mt-16">
         <h2 className="text-2xl font-bold md:text-3xl">Lançamentos</h2>
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {products.slice(0, 4).map((p) => <ProductCard key={p.id} p={p} />)}
+          {newCards.slice(0, 4).map(({ p, v }) => <ProductCard key={v?.id ?? p.id} p={p} variant={v} />)}
         </div>
         {products.length <= 1 && <p className="mt-4 text-sm text-muted-foreground">Novos produtos chegando em breve.</p>}
       </section>
