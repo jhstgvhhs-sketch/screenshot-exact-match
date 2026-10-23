@@ -9,6 +9,7 @@ import { brl } from "@/lib/store";
 import { PaymentGatewaySettings } from "@/components/site/PaymentGatewaySettings";
 import { CustomerOrderAdmin } from "@/components/site/CustomerOrderAdmin";
 import { StoreSettingsEditor } from "@/components/site/StoreSettings";
+import { AdminSectionBoundary } from "@/components/site/AdminSectionBoundary";
 import { ReviewModeration, AdminAddReview } from "@/components/site/ProductReviews";
 
 export const Route = createFileRoute("/admin")({
@@ -116,13 +117,13 @@ function AdminPage() {
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Variantes</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + p.product_variants.length, 0)}</p></div>
         <div className="rounded-xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">Unidades em estoque</p><p className="mt-2 text-3xl font-bold">{products.reduce((n, p) => n + totalStock(p), 0)}</p></div>
       </div>
-      <PaymentGatewaySettings />
-      <CustomerOrderAdmin />
-      <StoreSettingsEditor />
-      <CategoryManager categories={categories} onSaved={refreshCatalog} />
-      <AdminAddReview products={[...products, ...inactiveProducts].map(p => ({ id: p.id, name: p.name }))} />
-      <ReviewModeration />
-      <NewProductForm categories={categories} onSaved={refreshCatalog} />
+      <AdminSectionBoundary title="Pagamentos"><PaymentGatewaySettings /></AdminSectionBoundary>
+      <AdminSectionBoundary title="Pedidos"><CustomerOrderAdmin /></AdminSectionBoundary>
+      <AdminSectionBoundary title="Configurações"><StoreSettingsEditor /></AdminSectionBoundary>
+      <AdminSectionBoundary title="Categorias"><CategoryManager categories={categories} onSaved={refreshCatalog} /></AdminSectionBoundary>
+      <AdminSectionBoundary title="Adicionar avaliação"><AdminAddReview products={[...products, ...inactiveProducts].map(p => ({ id: p.id, name: p.name }))} /></AdminSectionBoundary>
+      <AdminSectionBoundary title="Avaliações"><ReviewModeration /></AdminSectionBoundary>
+      <AdminSectionBoundary title="Novo produto"><NewProductForm categories={categories} onSaved={refreshCatalog} /></AdminSectionBoundary>
       <h2 className="mt-10 text-xl font-bold">Produtos aguardando publicação</h2>
       {inactiveLoading && <p className="mt-3">Carregando rascunhos...</p>}
       <div className="mt-4 space-y-4">{inactiveProducts.map(p => <DraftProductEditor key={p.id} product={p} onSaved={refreshCatalog} />)}</div>
