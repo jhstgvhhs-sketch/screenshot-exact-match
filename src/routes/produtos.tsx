@@ -24,7 +24,10 @@ function Produtos() {
   const { data = [], isLoading } = useQuery(productsQuery());
   const list = data.filter(
     (p) =>
-      (!categoria || p.categories?.slug === categoria) &&
+      (!categoria || p.categories?.slug?.toLowerCase() === categoria.toLowerCase() ||
+        (categoria.toLowerCase() === "petg" && /petg/i.test(`${p.material ?? ""} ${p.name}`)) ||
+        (categoria.toLowerCase() === "pla" && /\\bpla\\b/i.test(`${p.material ?? ""} ${p.name}`)) ||
+        (categoria.toLowerCase() === "acessorios" && /acess[oó]rio/i.test(`${p.categories?.name ?? ""} ${p.name}`))) &&
       (!q || `${p.name} ${p.brand} ${p.product_variants.map((v) => v.color).join(" ")}`.toLowerCase().includes(q.toLowerCase())),
   );
   return (
