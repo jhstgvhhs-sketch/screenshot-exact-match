@@ -1,5 +1,7 @@
 # Painel administrativo 3DFLEX
 
+> Atualização: veja `docs/admin-audit.md` para as correções posteriores de financeiro, rastreamento, e-mail e segurança. O limite local de estoque baixo foi substituído por configuração compartilhada e o rateio passou a conciliar centavos exatos.
+
 Implementação no projeto existente, com `/admin` preservado. A implantação no backend e a publicação da loja ficaram com o proprietário. O registro do código na main do GitHub não comprova implantação da migração nem publicação em produção.
 
 ## Organização

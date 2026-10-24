@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { OrderTracking } from "./OrderTracking";
+import { missingTrackingColumns } from "@/lib/tracking";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -218,7 +220,6 @@ export function OrdersPage({
 function OrderDetails({ id }: { id: string }) {
   const client = useQueryClient();
   const [status, setStatus] = useState("");
-  const [tracking, setTracking] = useState("");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
   const query = useQuery({
@@ -227,18 +228,33 @@ function OrderDetails({ id }: { id: string }) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id,customer_name,customer_email,customer_phone,created_at,total,subtotal,discount,shipping,status,payment_status,payment_method,tracking_code,ship_street,ship_number,ship_complement,ship_district,ship_city,ship_state,ship_cep,archived_at,order_items(id,product_name,color,quantity,unit_price,sku)",
+          "id,customer_name,customer_email,customer_phone,created_at,total,subtotal,discount,shipping,status,payment_status,payment_method,tracking_code,tracking_carrier,tracking_url,ship_street,ship_number,ship_complement,ship_district,ship_city,ship_state,ship_cep,archived_at,order_items(id,product_name,color,quantity,unit_price,sku)",
         )
         .eq("id", id)
         .single();
+      if (missingTrackingColumns(error)) {
+        const legacy = await supabase
+          .from("orders")
+          .select(
+            "id,customer_name,customer_email,customer_phone,created_at,total,subtotal,discount,shipping,status,payment_status,payment_method,tracking_code,ship_street,ship_number,ship_complement,ship_district,ship_city,ship_state,ship_cep,archived_at,order_items(id,product_name,color,quantity,unit_price,sku)",
+          )
+          .eq("id", id)
+          .single();
+        if (legacy.error) throw legacy.error;
+        return {
+          ...legacy.data,
+          tracking_carrier: null,
+          tracking_url: null,
+          trackingSchemaReady: false,
+        };
+      }
       if (error) throw error;
-      return data;
+      return { ...data, trackingSchemaReady: true };
     },
   });
   useEffect(() => {
     if (query.data) {
       setStatus(query.data.status);
-      setTracking(query.data.tracking_code ?? "");
     }
   }, [query.data]);
   async function mutate(mode: "progress" | "paid" | "archive") {
@@ -268,10 +284,7 @@ function OrderDetails({ id }: { id: string }) {
         if (error) throw error;
         if (!data) throw new Error("O arquivamento não foi confirmado.");
       } else {
-        const updates =
-          mode === "paid"
-            ? { payment_status: "paid" }
-            : { status, tracking_code: tracking.trim() || null };
+        const updates = mode === "paid" ? { payment_status: "paid" } : { status };
         const { data, error } = await supabase
           .from("orders")
           .update(updates)
@@ -381,20 +394,29 @@ function OrderDetails({ id }: { id: string }) {
                   ))}
               </select>
             </label>
-            <label className="text-sm">
-              Código de rastreamento
-              <input
-                className={field + " mt-1"}
-                value={tracking}
-                maxLength={120}
-                onChange={(e) => setTracking(e.target.value)}
-              />
-            </label>
           </div>
+          {o.trackingSchemaReady ? (
+            <OrderTracking
+              key={JSON.stringify([o.id, o.tracking_carrier, o.tracking_code, o.tracking_url])}
+              order={o}
+              onSaved={async () => {
+                await Promise.all([
+                  client.invalidateQueries({ queryKey: ["admin-order-detail", id] }),
+                  client.invalidateQueries({ queryKey: ["customer-orders"] }),
+                  client.invalidateQueries({ queryKey: ["admin-orders"] }),
+                ]);
+              }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              O rastreamento completo depende da nova migração. O código já registrado e os demais
+              detalhes do pedido foram preservados.
+            </p>
+          )}
           <div className="flex flex-wrap gap-3">
             <button
               className={action + " bg-primary text-primary-foreground"}
-              disabled={busy || (status === o.status && tracking === (o.tracking_code ?? ""))}
+              disabled={busy || status === o.status}
               onClick={() => void mutate("progress")}
             >
               Salvar andamento

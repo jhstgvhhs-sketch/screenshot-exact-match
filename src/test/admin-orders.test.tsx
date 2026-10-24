@@ -87,7 +87,7 @@ describe("Order management safety", () => {
     fireEvent.change(await screen.findByLabelText("Andamento"), { target: { value: "shipped" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar andamento" }));
     await waitFor(() =>
-      expect(m.update).toHaveBeenCalledWith({ status: "shipped", tracking_code: null }),
+      expect(m.update).toHaveBeenCalledWith({ status: "shipped" }),
     );
     expect(m.update.mock.calls[0][0]).not.toHaveProperty("payment_status");
   });

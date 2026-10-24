@@ -38,7 +38,7 @@ describe("Admin reporting periods and export", () => {
       methods: [],
     } as unknown as FinancialReport;
     const csv = financialCsv(r, "2026-10-01", "2026-10-24");
-    expect(csv).toContain("99,9");
+    expect(csv).toContain("99,90");
     expect(csv).toContain("2026-10-24");
     expect(csv).not.toContain("customer_email");
   });

@@ -157,6 +157,12 @@ export type Database = {
           },
         ]
       }
+      admin_preferences: {
+        Row: { id: string; low_stock_limit: number }
+        Insert: { id: string; low_stock_limit?: number }
+        Update: { low_stock_limit?: number }
+        Relationships: []
+      }
       orders: {
         Row: {
           archived_at: string | null
@@ -181,6 +187,8 @@ export type Database = {
           status: string
           subtotal: number
           total: number
+          tracking_carrier: string | null
+          tracking_url: string | null
           tracking_code: string | null
           user_id: string
         }
@@ -207,6 +215,8 @@ export type Database = {
           status?: string
           subtotal: number
           total: number
+          tracking_carrier?: string | null
+          tracking_url?: string | null
           tracking_code?: string | null
           user_id: string
         }
@@ -233,6 +243,8 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          tracking_carrier?: string | null
+          tracking_url?: string | null
           tracking_code?: string | null
           user_id?: string
         }

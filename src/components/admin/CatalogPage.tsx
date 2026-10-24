@@ -1,3 +1,4 @@
+import { LowStockSettings, lowStockQuery } from "./LowStockSettings";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,11 +22,8 @@ export function CatalogPage({
   const [active, setActive] = useState("all");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
-  const [low, setLow] = useState(3);
-  useEffect(() => {
-    const stored = localStorage.getItem("3dflex-admin-low-stock");
-    if (stored && /^\d+$/.test(stored)) setLow(Math.min(9999, Number(stored)));
-  }, []);
+  const lowSettings = useQuery({ ...lowStockQuery(), enabled: stockOnly });
+  const low = lowSettings.data?.low_stock_limit;
   useEffect(() => {
     const timer = setTimeout(() => {
       setTerm(search);
@@ -114,28 +112,7 @@ export function CatalogPage({
           Adicionar produto
         </button>
       </div>
-      {stockOnly && (
-        <label className="block max-w-xs text-sm">
-          Limite de estoque baixo
-          <input
-            type="number"
-            min={0}
-            max={9999}
-            value={low}
-            className={field + " mt-1"}
-            onChange={(e) => {
-              const n = e.target.valueAsNumber;
-              if (Number.isInteger(n) && n >= 0 && n <= 9999) {
-                setLow(n);
-                localStorage.setItem("3dflex-admin-low-stock", String(n));
-              }
-            }}
-          />
-          <span className="mt-1 block text-xs text-muted-foreground">
-            Preferência visual deste navegador; não altera o estoque.
-          </span>
-        </label>
-      )}
+      {stockOnly && <LowStockSettings />}
       <QueryState
         loading={query.isLoading}
         error={query.isError}
@@ -219,10 +196,16 @@ export function CatalogPage({
                     </span>
                     <span>
                       {v.stock} ·{" "}
-                      <span className={v.stock <= low ? "text-primary" : "text-muted-foreground"}>
+                      <span
+                        className={
+                          low !== undefined && v.stock <= low
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }
+                      >
                         {v.stock === 0
                           ? "Sem estoque"
-                          : v.stock <= low
+                          : low !== undefined && v.stock <= low
                             ? "Estoque baixo"
                             : "Em estoque"}
                       </span>

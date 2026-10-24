@@ -35,18 +35,20 @@ async function add(
   return o.id;
 }
 beforeAll(async () => {
-  await db.exec(`create role anon;create role authenticated;create schema auth;
+  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
  create type app_role as enum ('admin','user');create function public.has_role(_user_id uuid,_role app_role) returns boolean language sql stable as $$select _user_id='${ADMIN}'::uuid and _role='admin'$$;
  grant usage on schema public,auth to authenticated,anon;grant execute on function auth.uid() to authenticated,anon;
+ create table user_roles(user_id uuid,role app_role);
  create table profiles(id uuid primary key,full_name text,phone text,created_at timestamptz default now());
  create table products(id uuid primary key,name text,material text,images text[]);
- create table orders(id uuid primary key default gen_random_uuid(),user_id uuid,customer_email text,created_at timestamptz default now(),total numeric,shipping numeric,discount numeric default 0,payment_status text,status text,payment_method text,customer_name text default 'Cliente',tracking_code text,archived_at timestamptz);
+ create table orders(id uuid primary key default gen_random_uuid(),user_id uuid,customer_email text,created_at timestamptz default now(),total numeric,shipping numeric,discount numeric default 0,payment_status text,status text,payment_method text,customer_name text default 'Cliente',customer_phone text default '',tracking_code text,archived_at timestamptz);
  create table order_items(id uuid primary key default gen_random_uuid(),order_id uuid,product_id uuid,product_name text,color text,quantity int,unit_price numeric);
- grant select on profiles,products,orders,order_items to authenticated;
+ grant select on profiles,products,orders,order_items to authenticated;grant update on orders to authenticated;
  alter table profiles enable row level security;alter table orders enable row level security;alter table order_items enable row level security;
  create policy admin_profiles on profiles for select to authenticated using(has_role(auth.uid(),'admin'));
  create policy own_orders on orders for select to authenticated using(user_id=auth.uid() or has_role(auth.uid(),'admin'));
+ create policy admin_update on orders for update to authenticated using(has_role(auth.uid(),'admin')) with check(has_role(auth.uid(),'admin'));
  create policy admin_items on order_items for select to authenticated using(has_role(auth.uid(),'admin'));
  insert into profiles values('${CUSTOMER}','Cliente local','',now());insert into products values('${PRODUCT}','PLA','PLA','{}');
  insert into orders(user_id,total,payment_status,status) values('${CUSTOMER}',50,'pago','processing');`);
@@ -59,12 +61,166 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../../supabase/migrations/20261024121752_tracking_and_admin_audit.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
 }, 30000);
 beforeEach(async () => {
-  await db.exec(`reset role;set test.uid='${ADMIN}';delete from order_items;delete from orders;`);
+  await db.exec(
+    `reset role;set test.uid='${ADMIN}';delete from tracking_email_attempts;delete from tracking_email_notifications;delete from order_items;delete from orders;`,
+  );
 });
 afterAll(() => db.close());
 describe("Financial SQL on local Postgres", () => {
+  it("reconciles allocated cents across every ranking and rounds the ticket to cents", async () => {
+    const id = await add(100.01);
+    await db.query("update orders set shipping=0 where id=$1", [id]);
+    for (const color of ["Preto", "Branco", "Azul"])
+      await db.query(
+        "insert into order_items(order_id,product_id,product_name,color,quantity,unit_price) values($1,gen_random_uuid(),$2,$3,1,1)",
+        [id, "Produto " + color, color],
+      );
+    const r = await report();
+    for (const rows of [r.products, r.colors, r.materials])
+      expect(Math.round(rows.reduce((sum: number, row: any) => sum + row.revenue, 0) * 100)).toBe(
+        10001,
+      );
+    await add(1);
+    await add(2);
+    expect((await report()).ticket).toBe(34.34);
+  });
+  it("returns zero metrics and daily zero points when there are no sales", async () => {
+    const r = await report("2026-10-24", "2026-10-24");
+    expect(r).toMatchObject({
+      revenue: 0,
+      paid: 0,
+      ticket: 0,
+      pending: 0,
+      pendingValue: 0,
+      total: 0,
+      today: 0,
+      week: 0,
+      month: 0,
+      undatedPaid: 0,
+    });
+    expect(r.products).toEqual([]);
+    expect(r.colors).toEqual([]);
+    expect(r.series).toEqual([{ date: "2026-10-24", revenue: 0 }]);
+  });
+  it("flags paid orders lacking line items rather than inventing rankings", async () => {
+    await add();
+    const r = await report();
+    expect(r.unitemizedPaid).toBe(1);
+    expect(r.products).toEqual([]);
+  });
+  it("saves tracking independently of financial and delivery status", async () => {
+    const id = await add(100, false);
+    await db.exec("set role authenticated");
+    const saved = await one(
+      "select admin_save_tracking($1,'Transportadora','ABC','https://transportadora.example/track') saved",
+      [id],
+    );
+    expect(saved.saved).toBe(true);
+    const row = await one(
+      "select payment_status,status,tracking_carrier,tracking_code,tracking_url from orders where id=$1",
+      [id],
+    );
+    expect(row).toMatchObject({
+      payment_status: "pendente",
+      status: "processing",
+      tracking_carrier: "Transportadora",
+      tracking_code: "ABC",
+      tracking_url: "https://transportadora.example/track",
+    });
+  });
+  it("rejects insecure tracking URLs in both the RPC and direct database updates", async () => {
+    const id = await add();
+    await expect(
+      db.query("select admin_save_tracking($1,'Teste','ABC','http://bad.example')", [id]),
+    ).rejects.toThrow(/HTTPS/);
+    await expect(
+      db.query("update orders set tracking_url='javascript:alert(1)' where id=$1", [id]),
+    ).rejects.toThrow(/check constraint/);
+  });
+  it("prevents customers from modifying tracking or reading administrative preferences and logs", async () => {
+    const id = await add();
+    await db.exec(`set role authenticated;set test.uid='${CUSTOMER}'`);
+    await expect(
+      db.query("select admin_save_tracking($1,'Teste','ABC','https://transportadora.example')", [
+        id,
+      ]),
+    ).rejects.toThrow(/administrativo/);
+    await db.query("update orders set tracking_code='HACK' where id=$1", [id]);
+    expect(
+      (await one("select tracking_code from orders where id=$1", [id])).tracking_code,
+    ).not.toBe("HACK");
+    expect((await db.query("select * from admin_preferences")).rows).toHaveLength(0);
+    expect((await db.query("select * from tracking_email_notifications")).rows).toHaveLength(0);
+    await expect(
+      db.query("select tracking_email_claim($1,$2)", [id, "a".repeat(64)]),
+    ).rejects.toThrow(/permission denied/);
+  });
+  it("persists a shared low-stock limit only for admins without updating inventory", async () => {
+    await db.exec("set role authenticated");
+    await db.exec("update admin_preferences set low_stock_limit=5 where id='main'");
+    expect(
+      (await one("select low_stock_limit from admin_preferences where id='main'")).low_stock_limit,
+    ).toBe(5);
+    await db.exec(`set test.uid='${CUSTOMER}'`);
+    await db.exec("update admin_preferences set low_stock_limit=9 where id='main'");
+    await db.exec(`set test.uid='${ADMIN}'`);
+    expect(
+      (await one("select low_stock_limit from admin_preferences where id='main'")).low_stock_limit,
+    ).toBe(5);
+  });
+  it("claims a notification once and never reclaims acceptance or uncertainty, even after provider idempotency expires", async () => {
+    const id = await add();
+    const fingerprint = "a".repeat(64);
+    await db.exec("grant select on orders to service_role;set role service_role");
+    const first = (await one("select tracking_email_claim($1,$2) r", [id, fingerprint])).r;
+    expect(first.claimed).toBe(true);
+    expect((await one("select tracking_email_claim($1,$2) r", [id, fingerprint])).r.claimed).toBe(
+      false,
+    );
+    await db.exec(
+      "update tracking_email_notifications set state='accepted',updated_at=now()-interval '3 days'",
+    );
+    expect((await one("select tracking_email_claim($1,$2) r", [id, fingerprint])).r.claimed).toBe(
+      false,
+    );
+    await db.exec("update tracking_email_notifications set state='uncertain'");
+    expect((await one("select tracking_email_claim($1,$2) r", [id, fingerprint])).r.claimed).toBe(
+      false,
+    );
+  });
+  it("allows only a bounded explicit retry of a recorded rejection after cooldown", async () => {
+    const id = await add();
+    const fingerprint = "b".repeat(64);
+    await db.exec("set role service_role");
+    await one("select tracking_email_claim($1,$2) r", [id, fingerprint]);
+    await db.exec("update tracking_email_notifications set state='failed'");
+    expect((await one("select tracking_email_claim($1,$2) r", [id, fingerprint])).r.claimed).toBe(
+      false,
+    );
+    await db.exec("update tracking_email_notifications set updated_at=now()-interval '2 minutes'");
+    expect(
+      (await one("select tracking_email_claim($1,$2) r", [id, fingerprint])).r.notification
+        .attempts,
+    ).toBe(2);
+    await db.exec(
+      "update tracking_email_notifications set state='failed',attempts=3,updated_at=now()-interval '2 minutes'",
+    );
+    expect((await one("select tracking_email_claim($1,$2) r", [id, fingerprint])).r.claimed).toBe(
+      false,
+    );
+  });
+
   it("counts paid orders once, excludes cancellations and uses the confirmation date", async () => {
     const oid = await add(100);
     await add(200, true, undefined, "processing", "card");

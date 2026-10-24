@@ -48,6 +48,7 @@ export type FinancialReport = {
   total: number;
   undatedPaid: number;
   undatedValue: number;
+  unitemizedPaid?: number;
   series: { date: string; revenue: number }[];
   products: {
     product_id: string;
@@ -67,18 +68,24 @@ export function csvCell(value: unknown) {
   return '"' + (/^[\s]*[=+\-@]/.test(s) ? "'" + s : s).replaceAll('"', '""') + '"';
 }
 export function financialCsv(report: FinancialReport, from: string, to: string) {
+  const money = (value: number) =>
+    value.toLocaleString("pt-BR", {
+      useGrouping: false,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   const rows: unknown[][] = [
     ["Relatório 3DFLEX", from, to],
     ["Critério", "Pagamentos confirmados com data registrada; America/Sao_Paulo"],
-    ["Faturamento confirmado", report.revenue],
+    ["Faturamento confirmado", money(report.revenue)],
     ["Pedidos pagos", report.paid],
-    ["Ticket médio", report.ticket],
+    ["Ticket médio", money(report.ticket)],
     ["Pagos sem data (fora do período)", report.undatedPaid],
     ["Tipo", "Descrição", "Material / situação", "Quantidade", "Valor (R$)"],
-    ...report.products.map((p) => ["Produto", p.product_name, "", p.quantity, p.revenue]),
-    ...report.colors.map((c) => ["Cor", c.color, c.material, c.quantity, c.revenue]),
-    ...report.materials.map((m) => ["Material", m.material, "", m.quantity, m.revenue]),
-    ...report.methods.map((m) => ["Pagamento", m.method, m.state, m.quantity, m.value]),
+    ...report.products.map((p) => ["Produto", p.product_name, "", p.quantity, money(p.revenue)]),
+    ...report.colors.map((c) => ["Cor", c.color, c.material, c.quantity, money(c.revenue)]),
+    ...report.materials.map((m) => ["Material", m.material, "", m.quantity, money(m.revenue)]),
+    ...report.methods.map((m) => ["Pagamento", m.method, m.state, m.quantity, money(m.value)]),
   ];
   return (
     "\ufeff" +

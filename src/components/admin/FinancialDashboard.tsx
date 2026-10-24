@@ -158,6 +158,12 @@ export function FinancialDashboard({ reports = false }: { reports?: boolean }) {
           retry={() => void query.refetch()}
         />
       )}
+      {query.isError && (
+        <p className="text-sm text-muted-foreground">
+          O relatório depende de admin_financial_report no backend atual da loja. Uma consulta com
+          erro não é apresentada como faturamento zerado.
+        </p>
+      )}
       {data && range && !query.isError && (
         <>
           {data.undatedPaid > 0 && (
@@ -172,6 +178,12 @@ export function FinancialDashboard({ reports = false }: { reports?: boolean }) {
               Esses valores não entram nos indicadores por período. O histórico foi preservado;
               novos pagamentos registrarão a data após a migração.
             </div>
+          )}
+          {!!data.unitemizedPaid && (
+            <p role="note" className="rounded-lg border border-primary/30 p-3 text-sm">
+              {data.unitemizedPaid} pedido(s) pago(s) sem itens registrados neste período. O
+              faturamento inclui seus totais; os rankings não inventam produtos para esses pedidos.
+            </p>
           )}
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
