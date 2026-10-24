@@ -2,6 +2,8 @@
 
 ## Implantação por etapas
 
+A referência do proprietário usa `public.profiles(id)`, compatível com o Cloud; a identidade continua sendo o ID validado pelo Auth. As novas tabelas recebem grants antes de ativar RLS e criar políticas; não há alteração de permissões de tabelas existentes.
+
 1. Aplicar `supabase/migrations/20261024015332_abandoned_carts_recovery.sql` **no backend atual da loja**, conferindo antes o projeto indicado em `supabase/config.toml`. Não aplicar em outro projeto Supabase conectado por engano.
 2. Publicar `recovery-carts`, `recovery-worker` e `recovery-provider-webhook` com os módulos `_shared/recovery-*` e a configuração específica de cada função. O JWT automático é desligado para permitir visitantes e callbacks; os handlers validam tokens de capacidade, JWT administrativo, segredo do cron ou assinatura do provedor, conforme a operação. Não remover essas validações.
 3. Manter `recovery_settings.config.enabled=false`, `dry_run=true`, canais desativados e `RECOVERY_LIVE_ENABLED=false`. Isso não altera a integração Blackcat.

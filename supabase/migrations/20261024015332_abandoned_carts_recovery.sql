@@ -7,7 +7,7 @@ insert into public.recovery_settings(config) values ('{"enabled":false,"dry_run"
 
 create table public.recovery_carts (
  id uuid primary key default gen_random_uuid(), session_hash text not null unique,
- owner_id uuid references auth.users(id) on delete set null,
+ owner_id uuid references public.profiles(id) on delete set null,
  parent_id uuid references public.recovery_carts(id) on delete set null,
  customer_name text not null default '', email text not null default '', phone text not null default '',
  email_consent boolean not null default false, whatsapp_consent boolean not null default false,
@@ -64,10 +64,10 @@ create table public.recovery_rate_limits (
 -- No anonymous or customer SELECT on any customer data, tokens, logs, or credentials.
 do $$ declare t text; begin
  foreach t in array array['recovery_settings','recovery_carts','recovery_consents','recovery_suppressions','recovery_links','recovery_jobs','recovery_attempts','recovery_rate_limits'] loop
-  execute format('alter table public.%I enable row level security',t);
   execute format('revoke all on public.%I from anon, authenticated',t);
   execute format('grant select on public.%I to authenticated',t);
   execute format('grant all on public.%I to service_role',t);
+  execute format('alter table public.%I enable row level security',t);
   execute format('create policy recovery_admin_read on public.%I for select to authenticated using (public.has_role(_role => ''admin''::public.app_role, _user_id => (select auth.uid())))',t);
  end loop;
 end $$;

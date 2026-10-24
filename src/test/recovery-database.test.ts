@@ -23,6 +23,7 @@ async function order(id:string,status="pendente",quantity=1){
 beforeAll(async()=>{
  await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
  create schema auth; create table auth.users(id uuid primary key); insert into auth.users values('${USER}');
+ create table public.profiles(id uuid primary key references auth.users(id)); insert into public.profiles values('${USER}');
  create function auth.uid() returns uuid language sql stable as $$select null::uuid$$;
  create type public.app_role as enum ('admin','user');
  create function public.has_role(_role public.app_role,_user_id uuid) returns boolean language sql stable as $$select false$$;
