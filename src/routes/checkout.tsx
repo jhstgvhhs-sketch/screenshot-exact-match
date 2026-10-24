@@ -8,6 +8,9 @@ import { cardWhatsAppUrl } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
 import { RecoveryConsent } from "@/components/RecoveryConsent";
 import { captureRecoveryContact } from "@/lib/cart-recovery";
+import { ConservationCoupon } from "@/components/ConservationCoupon";
+import { OrderGifts } from "@/components/OrderGifts";
+import { EMPTY_KIT } from "@/lib/conservation-kit";
 import { PixQrCode } from "@/components/PixQrCode";
 import { CheckoutAddress } from "@/components/CheckoutAddress";
 import { PixPaymentStatus } from "@/components/PixPaymentStatus";
@@ -21,6 +24,7 @@ type Payment = "pix" | "card";
 
 export function Checkout() {
   const { items, subtotal, replace } = useCart();
+  const [kit, setKit] = useState(EMPTY_KIT);
   const [payment, setPayment] = useState<Payment>("pix");
   const [cardShippingConfirmed, setCardShippingConfirmed] = useState(false);
   const [step, setStep] = useState<"details" | "payment">("details");
@@ -35,7 +39,7 @@ export function Checkout() {
   const [pixData, setPixData] = useState<{ copyPaste: string; qrCodeBase64?: string; orderId: string } | null>(null);
 
   async function beginPix() {
-    if (!deliveryData || pixLoading || pixData) return;
+    if (!deliveryData || pixLoading || pixData || !kit.ready) return;
     setPixLoading(true);
     setPixError(null);
     try {
@@ -44,6 +48,7 @@ export function Checkout() {
       const review = await reviewCheckoutItems(items);
       if (review.changed) { replace(review.current); throw new Error("Os preços ou produtos disponíveis foram atualizados. Confira o resumo antes de continuar."); }
       const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
+      if (kit.code) customer.coupon_code = kit.code;
       const { data, error } = await supabase.functions.invoke("blackcat-create-pix", {
         body: { customer, items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })) }
       });
@@ -57,7 +62,7 @@ export function Checkout() {
   }
 
   async function beginCard() {
-    if (!deliveryData || cardLoading || cardOrderId) return;
+    if (!deliveryData || cardLoading || cardOrderId || !kit.ready) return;
     setCardLoading(true);
     setCardError(null);
     try {
@@ -71,13 +76,13 @@ export function Checkout() {
       const { data, error } = await supabase.rpc("place_order", {
         _items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })),
         _customer: customer,
-        _coupon: null as unknown as string,
+        _coupon: kit.code || null as unknown as string,
         _method: "cartao",
       });
       if (error) throw error;
       if (!data) throw new Error("O pedido não foi confirmado pelo banco.");
       setCardOrderId(data);
-      setWhatsappUrl(cardWhatsAppUrl(items, subtotal, deliveryData));
+      setWhatsappUrl(cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts));
       setValidated(true);
     } catch (error) {
       setCardError(error instanceof Error ? error.message : "Não foi possível registrar o pedido.");
@@ -139,7 +144,7 @@ export function Checkout() {
           </div>
         )}
         {payment === "card" && cardShippingConfirmed && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && <p className="text-xs text-muted-foreground">Você escolheu continuar no cartão com frete de {brl(shippingForOrder(subtotal, "card"))}. <button type="button" className="underline text-primary" onClick={() => setCardShippingConfirmed(false)}>Rever oferta Pix</button></p>}
-        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={pixLoading || cardLoading || !!pixData || (payment === "card" && !!cardOrderId) || (payment === "card" && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : pixData ? "Pix já gerado" : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
+        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={!kit.ready || pixLoading || cardLoading || !!pixData || (payment === "card" && !!cardOrderId) || (payment === "card" && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : pixData ? "Pix já gerado" : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
         {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
         {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
         {pixData && payment === "pix" && <div className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="font-bold">Pagamento Pix — pedido {pixData.orderId}</h2><PixPaymentStatus orderId={pixData.orderId}><PixQrCode copyPaste={pixData.copyPaste} /><label className="block text-sm">Pix copia e cola<textarea className="mt-2 w-full rounded-lg border bg-background p-3" readOnly rows={3} value={pixData.copyPaste}/></label><button type="button" className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={() => void navigator.clipboard.writeText(pixData.copyPaste)}>Copiar código Pix</button><p className="text-sm text-muted-foreground">Aguarde a confirmação do pagamento. Não faça um novo pedido enquanto este estiver pendente.</p></PixPaymentStatus></div>}
@@ -150,6 +155,8 @@ export function Checkout() {
       <aside className="order-first h-fit lg:order-none space-y-4 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-24">
         <h2 className="text-lg font-bold">Resumo do pedido</h2>
         <ul className="space-y-3 text-sm">{items.map(item => <li key={item.variantId} className="flex justify-between gap-3"><span>{item.name} — {item.color} × {item.quantity}</span><span className="shrink-0">{brl(item.price * item.quantity)}</span></li>)}</ul>
+        <ConservationCoupon items={items} disabled={pixLoading || cardLoading || !!pixData || !!cardOrderId} onChange={setKit}/>
+        <OrderGifts value={kit.gifts}/>
         <p className="text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix.</p><div className="space-y-2 border-t border-border pt-3 text-sm"><div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div><div className="flex justify-between"><span>{shipping === 0 ? "Frete grátis no Pix" : "Frete fixo"}</span><span>{brl(shipping)}</span></div><div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span>Total</span><span>{brl(subtotal + shipping)}</span></div></div>
         <Link to="/carrinho" className="block rounded-lg border border-primary/40 px-4 py-3 text-center text-sm font-semibold text-primary hover:bg-primary/10">Voltar ao carrinho</Link>
       </aside>

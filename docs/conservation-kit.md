@@ -1,0 +1,13 @@
+# Cupom kitconservação
+
+No resumo do checkout, aplique `kitconservação`, `kitconservaçao` ou `kitconservacao` (maiúsculas/minúsculas indiferentes). O código persistido é `KITCONSERVACAO`. A cada bloco completo de 5 kg de filamentos da marca MasterPrint, o pedido recebe 1 kg de sílica em gel e 5 embalagens a vácuo. Ex.: 5/9 kg = 1 kit; 10/14 kg = 2 kits; 15 kg = 3 kits. Cores e materiais podem ser combinados. O peso é lido do catálogo, aceitando kg ou g; produtos de outra marca e pesos não reconhecidos não contam.
+
+A prévia usa uma RPC somente de leitura e é recalculada após mudanças no carrinho. Falhas de consulta ou peso insuficiente bloqueiam a finalização com o cupom aplicado; é possível remover o cupom e continuar. O servidor recalcula os brindes em `place_order` e desconsidera qualquer quantidade de brindes enviada pelo navegador.
+
+`orders.gift_items` registra os brindes separadamente dos itens vendidos, sem preço, desconto, reserva de estoque fictícia ou interferência nos relatórios financeiros. São mostrados no resumo, no detalhe do pedido administrativo, na área do cliente e na mensagem manual de cartão no WhatsApp. O registro existente de brindes antigos permanece vazio; pedidos históricos não são recalculados. Não foram criados produtos fictícios para os brindes nem modificados preços/quantidades do catálogo.
+
+O Pix utiliza o contrato já existente: a função `blackcat-create-pix` encaminha `customer` integralmente a `place_order`; `customer.coupon_code` transporta o cupom e a RPC calcula os benefícios. Não é necessário alterar ou republicar essa Edge Function. Cartão usa o argumento `_coupon` existente. Os valores de subtotal, desconto e frete continuam seguindo as regras anteriores. Esta promoção entrega brindes, sem desconto monetário e sem acumular outro cupom no mesmo campo.
+
+A migração `20261024172652_kit_conservation_coupon.sql` preserva a implementação inspecionada de `place_order`, incluindo limites de quantidade, reservas de estoque não negativas, autenticação e frete. O cupom pode ser desativado no registro `coupons.active`; a finalização verifica ativação e validade. Não cria novas permissões sobre pedidos. A RPC de prévia usa SECURITY INVOKER, calcula somente com catálogo público e não expõe dados de clientes.
+
+Validação: banco PostgreSQL isolado para limites, composição de materiais, outros fabricantes, pesos em gramas, múltiplos kits, Pix/cartão, manutenção de valores, rollback por erro e login obrigatório. Testes de interface cobrem aplicação, remoção, recálculo, falha de consulta e mensagem de WhatsApp. Consultas reais de prévia não criam pedidos, não alteram estoque e não geram cobranças. Não foi realizado pagamento real ou envio de mensagem. A interface exige publicação pelo proprietário.

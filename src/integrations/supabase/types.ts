@@ -177,6 +177,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          gift_items: Json
           archived_at: string | null
           coupon_code: string | null
           created_at: string
@@ -206,6 +207,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          gift_items?: Json
           archived_at?: string | null
           coupon_code?: string | null
           created_at?: string
@@ -235,6 +237,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          gift_items?: Json
           archived_at?: string | null
           coupon_code?: string | null
           created_at?: string
@@ -952,6 +955,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      kit_conservation_preview: { Args: { _items: Json }; Returns: Json }
       admin_customer_page: {
         Args: { p_page?: number; p_search?: string }
         Returns: Json

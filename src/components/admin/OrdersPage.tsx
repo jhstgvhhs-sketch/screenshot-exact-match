@@ -1,3 +1,4 @@
+import { OrderGifts } from "@/components/OrderGifts";
 import { useState, useEffect } from "react";
 import { OrderTracking } from "./OrderTracking";
 import { missingTrackingColumns } from "@/lib/tracking";
@@ -228,7 +229,7 @@ function OrderDetails({ id }: { id: string }) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id,customer_name,customer_email,customer_phone,created_at,total,subtotal,discount,shipping,status,payment_status,payment_method,tracking_code,tracking_carrier,tracking_url,ship_street,ship_number,ship_complement,ship_district,ship_city,ship_state,ship_cep,archived_at,order_items(id,product_name,color,quantity,unit_price,sku)",
+          "id,gift_items,customer_name,customer_email,customer_phone,created_at,total,subtotal,discount,shipping,status,payment_status,payment_method,tracking_code,tracking_carrier,tracking_url,ship_street,ship_number,ship_complement,ship_district,ship_city,ship_state,ship_cep,archived_at,order_items(id,product_name,color,quantity,unit_price,sku)",
         )
         .eq("id", id)
         .single();
@@ -236,7 +237,7 @@ function OrderDetails({ id }: { id: string }) {
         const legacy = await supabase
           .from("orders")
           .select(
-            "id,customer_name,customer_email,customer_phone,created_at,total,subtotal,discount,shipping,status,payment_status,payment_method,tracking_code,ship_street,ship_number,ship_complement,ship_district,ship_city,ship_state,ship_cep,archived_at,order_items(id,product_name,color,quantity,unit_price,sku)",
+            "id,gift_items,customer_name,customer_email,customer_phone,created_at,total,subtotal,discount,shipping,status,payment_status,payment_method,tracking_code,ship_street,ship_number,ship_complement,ship_district,ship_city,ship_state,ship_cep,archived_at,order_items(id,product_name,color,quantity,unit_price,sku)",
           )
           .eq("id", id)
           .single();
@@ -368,6 +369,7 @@ function OrderDetails({ id }: { id: string }) {
           <p className="text-sm">
             Subtotal: {brl(o.subtotal)} · Desconto: {brl(o.discount)} · Frete: {brl(o.shipping)}
           </p>
+          <OrderGifts value={o.gift_items}/>
           <p className="text-xl font-bold">Total: {brl(o.total)}</p>
           <p>
             {paymentMethod(o.payment_method)} · <Status>{label(o.payment_status)}</Status>

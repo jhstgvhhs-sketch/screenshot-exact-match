@@ -1,3 +1,4 @@
+import { OrderGifts } from "@/components/OrderGifts";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -33,7 +34,7 @@ export function CustomerOrders({ userId }: { userId: string }) {
       const { data, error, count } = await supabase
         .from("orders")
         .select(
-          "id,created_at,status,payment_status,total,tracking_code,tracking_carrier,tracking_url,ship_city,ship_state",
+          "id,gift_items,created_at,status,payment_status,total,tracking_code,tracking_carrier,tracking_url,ship_city,ship_state",
           { count: "exact" },
         )
         .eq("user_id", userId)
@@ -44,7 +45,7 @@ export function CustomerOrders({ userId }: { userId: string }) {
         // Preserve existing order history during a staged migration, without masking permission errors.
         const legacy = await supabase
           .from("orders")
-          .select("id,created_at,status,payment_status,total,tracking_code,ship_city,ship_state", {
+          .select("id,gift_items,created_at,status,payment_status,total,tracking_code,ship_city,ship_state", {
             count: "exact",
           })
           .eq("user_id", userId)
@@ -107,6 +108,7 @@ export function CustomerOrders({ userId }: { userId: string }) {
                 Status: {orderStatus[o.status] ?? o.status} · Pagamento:{" "}
                 {payments[o.payment_status] ?? o.payment_status}
               </p>
+              <OrderGifts value={o.gift_items}/>
               {o.tracking_carrier && (
                 <p className="mt-3 text-sm">Transportadora: {o.tracking_carrier}</p>
               )}
