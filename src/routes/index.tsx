@@ -37,10 +37,9 @@ function Index() {
 
   return (
     <>
-      <HomeImages><section className="relative overflow-hidden border-b border-border">
-        <img src={hero} alt="Carretéis de filamento 3D e bico de impressora extrudando filamento laranja" width={1600} height={1008} className="absolute inset-0 size-full object-cover opacity-60" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-        <div className="container-x relative py-24 md:py-36">
+      <HomeImages><section className="relative grid overflow-hidden border-b border-border">
+        <img src={hero} alt="Carretéis de filamento 3D e bico de impressora extrudando filamento laranja" width={1600} height={1008} className="col-start-1 row-start-1 max-h-[650px] w-full self-center object-contain" />
+        <div className="container-x relative col-start-1 row-start-1 self-center py-12 md:py-36">
           <div className="max-w-xl animate-rise">
             <HomeHeroText />
             <Button asChild variant="buy" size="xl" className="mt-8">

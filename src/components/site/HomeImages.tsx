@@ -39,7 +39,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
     <section
       aria-label="Imagens em destaque"
       aria-roledescription="carrossel"
-      className="relative overflow-hidden border-b border-border bg-black"
+      className="relative grid overflow-hidden border-b border-border bg-black"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocusCapture={() => setFocused(true)}
@@ -52,13 +52,9 @@ export function HomeImages({ children }: { children: ReactNode }) {
         src={images[index].url}
         alt={images[index].alt}
         fetchPriority="high"
-        className="absolute inset-0 h-full w-full object-cover"
+        className="col-start-1 row-start-1 block max-h-[650px] w-full self-center object-contain"
       />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/20"
-      />
-      <div className="container-x pointer-events-none relative flex min-h-[320px] items-center px-6 pt-10 pb-24 sm:min-h-[380px] sm:px-12 md:py-36">
+      <div className="container-x pointer-events-none relative col-start-1 row-start-1 flex min-h-[320px] items-center px-6 pt-10 pb-24 sm:min-h-[380px] sm:px-12 md:py-36">
         <HomeHeroText image={images[index]} />
       </div>
       {images.length > 1 && (

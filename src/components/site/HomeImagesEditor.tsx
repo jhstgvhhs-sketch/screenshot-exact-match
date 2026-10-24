@@ -96,7 +96,8 @@ export function HomeImagesEditor({
         Controle a imagem grande no topo da loja. Adicione até {MAX_HOME_IMAGES} imagens; o
         carrossel passa automaticamente a cada 7 segundos e permite avançar ou voltar pelas setas. O
         texto de cada imagem aparece sobre ela e pode ser editado nos campos abaixo. Use fotos sem
-        texto e mantenha os elementos importantes no centro.
+        texto e mantenha os elementos importantes no centro. Recomendado: 1568 × 987 px, JPG ou WebP
+        até 5 MB. As imagens aparecem inteiras, sem sombreado.
       </p>
       <fieldset disabled={busy} className="space-y-4">
         {images === null ? (
