@@ -51,7 +51,7 @@ export function Header() {
         </form>
         <div className="ml-auto flex items-center gap-1 md:ml-2">
           {isAdmin && (
-            <Link to="/admin" aria-label="Painel" className="rounded-lg p-2 text-primary hover:bg-accent"><Shield className="size-5" /></Link>
+            <Link to="/admin" search={{ section: "dashboard" }} aria-label="Painel" className="rounded-lg p-2 text-primary hover:bg-accent"><Shield className="size-5" /></Link>
           )}
           <Link to="/conta" aria-label="Minha conta" className="rounded-lg p-2 hover:bg-accent"><User className="size-5" /></Link>
           <Link to="/carrinho" aria-label="Carrinho" className="relative rounded-lg p-2 hover:bg-accent">
