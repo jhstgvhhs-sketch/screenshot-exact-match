@@ -1,8 +1,11 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { HomeImagesEditor } from "./HomeImagesEditor";
+import type { HomeImage } from "@/lib/home-images";
 import { supabase } from "@/integrations/supabase/client";
 
 export type StoreSettings = {
+ homepage_images?: HomeImage[] | null;
  id: string; business_name: string; legal_name: string; cnpj: string; whatsapp: string;
  phone: string; email: string; address: string; about: string; logo_url: string; banner_url: string;
 };
@@ -19,7 +22,7 @@ export function useStoreSettings() {
    staleTime: 60000,
  });
 }
-const labels: { key: keyof StoreSettings; label: string; placeholder?: string }[] = [
+const labels: { key: Exclude<keyof StoreSettings, "homepage_images">; label: string; placeholder?: string }[] = [
  { key: "business_name", label: "Nome comercial" },
  { key: "legal_name", label: "Razão social" },
  { key: "cnpj", label: "CNPJ", placeholder: "00.000.000/0000-00" },
@@ -35,7 +38,7 @@ export function StoreSettingsEditor() {
  const client = useQueryClient();
  if (isLoading) return <p className="mt-8">Carregando dados da loja...</p>;
  if (isError) return <p className="mt-8 text-destructive">Não foi possível ler os dados da loja. Verifique se a migração foi aplicada no Lovable Cloud.</p>;
- return <StoreSettingsForm key={JSON.stringify(data)} current={data ?? initial} onSaved={() => void client.invalidateQueries({ queryKey: ["store-settings"] })} />;
+ return <><HomeImagesEditor key={JSON.stringify(data?.homepage_images)} current={data?.homepage_images ?? null} onSaved={() => void client.invalidateQueries({ queryKey: ["store-settings"] })}/><StoreSettingsForm key={JSON.stringify(data)} current={data ?? initial} onSaved={() => void client.invalidateQueries({ queryKey: ["store-settings"] })} /></>;
 }
 function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSaved: () => void }) {
  const [fields, setFields] = useState(current);
@@ -64,7 +67,7 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
    setBusy(true); setMessage("");
    try {
      for (const url of [fields.logo_url, fields.banner_url]) if (url.trim() && !/^https:\/\//i.test(url.trim())) throw new Error("As imagens precisam usar URLs HTTPS.");
-     const { id, ...values } = fields;
+     const { id, homepage_images: _homepageImages, ...values } = fields;
      const { data, error } = await settingsTable().upsert({ id: "main", ...values }, { onConflict: "id" }).select("id").single();
      if (error) throw error;
      if (!data) throw new Error("O banco não confirmou a atualização.");
@@ -82,6 +85,8 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
     </label>)}
    </div>
    <label className="block text-sm font-semibold">Sobre a loja<textarea rows={4} value={fields.about} onChange={e => set("about",e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3"/></label>
+   <h3 className="font-bold">Imagens do rodapé</h3>
+   <p className="text-sm text-muted-foreground">Estes campos alteram somente o rodapé. Para trocar a imagem grande do topo, use Imagens da página inicial acima.</p>
    <div className="grid gap-4 md:grid-cols-2">
      {(["logo_url","banner_url"] as const).map(field => <div key={field} className="space-y-3 rounded-lg border border-border p-4">
        <label className="block text-sm font-semibold">Enviar {field === "logo_url" ? "logo" : "banner"} (JPG, PNG, WebP, até 5 MB)
@@ -89,6 +94,7 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
        </label>
        {uploading === field && <p className="text-sm">Enviando imagem...</p>}
        {fields[field] && <img src={fields[field]} alt={field === "logo_url" ? "Prévia da logo" : "Prévia do banner"} className="max-h-40 max-w-full rounded-lg border border-border object-contain"/>}
+       {fields[field] && <button type="button" disabled={busy || !!uploading} className="text-sm text-destructive underline" onClick={() => { set(field, ""); setMessage("Imagem removida da prévia. Confirme e salve os dados da loja para removê-la do rodapé."); }}>Apagar {field === "logo_url" ? "logo" : "banner"} do rodapé</button>}
      </div>)}
    </div>
    <button type="submit" disabled={busy || !!uploading} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Salvando..." : "Confirmar e salvar dados da loja"}</button>
