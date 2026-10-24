@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { addCartItem, clampQuantity, restoreCart } from "./cart-stock";
+import { trackRecoveryCart } from "./cart-recovery";
 import { supabase } from "@/integrations/supabase/client";
 
 export type CartItem = {
@@ -20,6 +21,7 @@ type Ctx = {
   setQty: (variantId: string, q: number) => void;
   remove: (variantId: string) => void;
   clear: () => void;
+  replace: (items: CartItem[]) => void;
   count: number;
   subtotal: number;
 };
@@ -60,6 +62,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return () => { active = false; window.removeEventListener("focus", refresh); };
   }, [loaded]);
 
+  useEffect(() => { if (loaded) trackRecoveryCart(items); }, [items, loaded]);
+
+  useEffect(() => {
+    if (!loaded || !items.length) return;
+    let lastTouch = 0;
+    const touch = () => {
+      if (Date.now() - lastTouch < 60000 || /^\/(admin|conta|recuperar|descadastrar)/.test(window.location.pathname)) return;
+      lastTouch = Date.now(); trackRecoveryCart(items);
+    };
+    window.addEventListener("pointerdown", touch); window.addEventListener("keydown", touch);
+    return () => { window.removeEventListener("pointerdown", touch); window.removeEventListener("keydown", touch); };
+  }, [items, loaded]);
+
   const add = (i: CartItem) => setItems(prev => addCartItem(prev, i));
   const setQty = (id: string, q: number) =>
     setItems(prev => prev.map(p => p.variantId === id ? { ...p, quantity: clampQuantity(p, q) } : p).filter(p => p.quantity > 0));
@@ -69,7 +84,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return (
     <CartCtx.Provider
       value={{
-        items, add, setQty, remove, clear,
+        items, add, setQty, remove, clear, replace: values => setItems(restoreCart(values)),
         count: items.reduce((a, b) => a + b.quantity, 0),
         subtotal: items.reduce((a, b) => a + b.price * b.quantity, 0),
       }}

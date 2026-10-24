@@ -3,3 +3,11 @@ project_id = "wexuhtwkwtieaiebhnje"
 # Public feed returns only timestamps of paid orders, never customer or order details.
 [functions.recent-purchases]
 verify_jwt = false
+
+# Capability tokens, admin JWTs, cron secret and signed provider webhooks are verified inside each handler.
+[functions.recovery-carts]
+verify_jwt = false
+[functions.recovery-worker]
+verify_jwt = false
+[functions.recovery-provider-webhook]
+verify_jwt = false

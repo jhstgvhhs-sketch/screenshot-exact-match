@@ -14,7 +14,9 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ContaRouteImport } from './routes/conta'
+import { Route as DescadastrarRouteImport } from './routes/descadastrar'
 import { Route as ProdutosRouteImport } from './routes/produtos'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as InfoSlugRouteImport } from './routes/info.$slug'
 import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
 
@@ -43,9 +45,19 @@ const ContaRoute = ContaRouteImport.update({
   path: '/conta',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DescadastrarRoute = DescadastrarRouteImport.update({
+  id: '/descadastrar',
+  path: '/descadastrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProdutosRoute = ProdutosRouteImport.update({
   id: '/produtos',
   path: '/produtos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InfoSlugRoute = InfoSlugRouteImport.update({
@@ -65,7 +77,9 @@ export interface FileRoutesByFullPath {
   '/carrinho': typeof CarrinhoRoute
   '/checkout': typeof CheckoutRoute
   '/conta': typeof ContaRoute
+  '/descadastrar': typeof DescadastrarRoute
   '/produtos': typeof ProdutosRoute
+  '/recuperar': typeof RecuperarRoute
   '/info/$slug': typeof InfoSlugRoute
   '/produto/$slug': typeof ProdutoSlugRoute
 }
@@ -75,7 +89,9 @@ export interface FileRoutesByTo {
   '/carrinho': typeof CarrinhoRoute
   '/checkout': typeof CheckoutRoute
   '/conta': typeof ContaRoute
+  '/descadastrar': typeof DescadastrarRoute
   '/produtos': typeof ProdutosRoute
+  '/recuperar': typeof RecuperarRoute
   '/info/$slug': typeof InfoSlugRoute
   '/produto/$slug': typeof ProdutoSlugRoute
 }
@@ -86,7 +102,9 @@ export interface FileRoutesById {
   '/carrinho': typeof CarrinhoRoute
   '/checkout': typeof CheckoutRoute
   '/conta': typeof ContaRoute
+  '/descadastrar': typeof DescadastrarRoute
   '/produtos': typeof ProdutosRoute
+  '/recuperar': typeof RecuperarRoute
   '/info/$slug': typeof InfoSlugRoute
   '/produto/$slug': typeof ProdutoSlugRoute
 }
@@ -98,7 +116,9 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/checkout'
     | '/conta'
+    | '/descadastrar'
     | '/produtos'
+    | '/recuperar'
     | '/info/$slug'
     | '/produto/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -108,7 +128,9 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/checkout'
     | '/conta'
+    | '/descadastrar'
     | '/produtos'
+    | '/recuperar'
     | '/info/$slug'
     | '/produto/$slug'
   id:
@@ -118,7 +140,9 @@ export interface FileRouteTypes {
     | '/carrinho'
     | '/checkout'
     | '/conta'
+    | '/descadastrar'
     | '/produtos'
+    | '/recuperar'
     | '/info/$slug'
     | '/produto/$slug'
   fileRoutesById: FileRoutesById
@@ -129,7 +153,9 @@ export interface RootRouteChildren {
   CarrinhoRoute: typeof CarrinhoRoute
   CheckoutRoute: typeof CheckoutRoute
   ContaRoute: typeof ContaRoute
+  DescadastrarRoute: typeof DescadastrarRoute
   ProdutosRoute: typeof ProdutosRoute
+  RecuperarRoute: typeof RecuperarRoute
   InfoSlugRoute: typeof InfoSlugRoute
   ProdutoSlugRoute: typeof ProdutoSlugRoute
 }
@@ -171,11 +197,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/descadastrar': {
+      id: '/descadastrar'
+      path: '/descadastrar'
+      fullPath: '/descadastrar'
+      preLoaderRoute: typeof DescadastrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/produtos': {
       id: '/produtos'
       path: '/produtos'
       fullPath: '/produtos'
       preLoaderRoute: typeof ProdutosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/info/$slug': {
@@ -201,7 +241,9 @@ const rootRouteChildren: RootRouteChildren = {
   CarrinhoRoute: CarrinhoRoute,
   CheckoutRoute: CheckoutRoute,
   ContaRoute: ContaRoute,
+  DescadastrarRoute: DescadastrarRoute,
   ProdutosRoute: ProdutosRoute,
+  RecuperarRoute: RecuperarRoute,
   InfoSlugRoute: InfoSlugRoute,
   ProdutoSlugRoute: ProdutoSlugRoute,
 }

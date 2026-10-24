@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { reviewCheckoutItems } from "@/lib/checkout-review";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
 import { shippingForOrder, FREE_PIX_SHIPPING_THRESHOLD_BRL } from "@/lib/shipping";
 import { cardWhatsAppUrl } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
+import { RecoveryConsent } from "@/components/RecoveryConsent";
+import { captureRecoveryContact } from "@/lib/cart-recovery";
 import { PixQrCode } from "@/components/PixQrCode";
 import { CheckoutAddress } from "@/components/CheckoutAddress";
 import { PixPaymentStatus } from "@/components/PixPaymentStatus";
@@ -17,7 +20,7 @@ export const Route = createFileRoute("/checkout")({
 type Payment = "pix" | "card";
 
 export function Checkout() {
-  const { items, subtotal } = useCart();
+  const { items, subtotal, replace } = useCart();
   const [payment, setPayment] = useState<Payment>("pix");
   const [cardShippingConfirmed, setCardShippingConfirmed] = useState(false);
   const [step, setStep] = useState<"details" | "payment">("details");
@@ -38,6 +41,8 @@ export function Checkout() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Entre na sua conta para finalizar o pedido por Pix.");
+      const review = await reviewCheckoutItems(items);
+      if (review.changed) { replace(review.current); throw new Error("Os preços ou produtos disponíveis foram atualizados. Confira o resumo antes de continuar."); }
       const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
       const { data, error } = await supabase.functions.invoke("blackcat-create-pix", {
         body: { customer, items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })) }
@@ -58,6 +63,8 @@ export function Checkout() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Entre na sua conta para registrar o pedido.");
+      const review = await reviewCheckoutItems(items);
+      if (review.changed) { replace(review.current); throw new Error("Os preços ou produtos disponíveis foram atualizados. Confira o resumo antes de continuar."); }
       const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
       if (customer.email?.toLowerCase() !== user.email?.toLowerCase())
         throw new Error("Utilize no pedido o mesmo e-mail da sua conta.");
@@ -96,7 +103,7 @@ export function Checkout() {
     <p className="mt-2 text-sm text-muted-foreground">{step === "details" ? "Etapa 1 de 2 — Informe seus dados para continuar ao pagamento." : "Etapa 2 de 2 — Escolha a forma de pagamento. Nenhuma cobrança será feita automaticamente."}</p>
     <nav aria-label="Etapas da compra" className="mt-6"><ol className="flex gap-3 text-sm">{["Dados de entrega", "Pagamento"].map((label, index) => <li key={label} aria-current={(step === "details" ? 0 : 1) === index ? "step" : undefined} className={`flex flex-1 items-center gap-2 rounded-lg border p-3 ${index === 0 || step === "payment" ? "border-primary/50 bg-primary/10" : "border-border text-muted-foreground"}`}><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{index === 0 && step === "payment" ? "✓" : index + 1}</span>{label}</li>)}</ol></nav>
     <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <form hidden={step !== "details"} id="checkout-form" onSubmit={handleSubmit} onChange={() => { setValidated(false); setWhatsappUrl(null); }} className="space-y-6">
+      <form hidden={step !== "details"} id="checkout-form" onSubmit={handleSubmit} onChange={event => { setValidated(false); setWhatsappUrl(null); captureRecoveryContact(event.currentTarget); }} className="space-y-6">
         <fieldset className="space-y-4 rounded-xl border border-border bg-card p-5">
           <legend className="px-2 font-bold">Seus dados</legend>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -107,6 +114,7 @@ export function Checkout() {
           </div>
         </fieldset>
         <CheckoutAddress fieldClass={fieldClass} />
+        <RecoveryConsent />
         <button type="submit" className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground hover:opacity-90">Continuar para pagamento</button>
       </form><div hidden={step !== "payment"} className="space-y-6">
         <fieldset className="space-y-3 rounded-xl border border-border bg-card p-5">

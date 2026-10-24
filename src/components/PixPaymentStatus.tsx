@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Clock3, CircleAlert } from "lucide-react";
+import { markRecoveryCompleted } from "@/lib/cart-recovery";
 import { supabase } from "@/integrations/supabase/client";
 
 type Status = "pending" | "paid" | "closed" | "unavailable";
@@ -22,6 +23,7 @@ export function PixPaymentStatus({ orderId, children }: { orderId: string; child
         }
       } catch { /* Keep payment unconfirmed on network errors. */ }
       if (!active) return;
+      if (next === "paid") markRecoveryCompleted();
       setStatus({ orderId, value: next });
       if (next !== "paid" && next !== "closed") timer = setTimeout(check, 10000);
     }
