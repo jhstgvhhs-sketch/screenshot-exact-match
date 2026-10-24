@@ -1,6 +1,7 @@
 -- Apply only after the recovery migration. This first job never calls a provider.
 create extension if not exists pg_cron with schema pg_catalog;
 select cron.schedule('3dflex-recovery-sweep','*/5 * * * *','select public.recovery_tick()');
+update public.recovery_runtime set sweep_registered=true,registered_at=now() where id;
 
 -- Optional dispatch: needs RECOVERY_CRON_SECRET and RECOVERY_PUBLIC_ORIGIN/links in Edge Secrets.
 -- Store the SAME cron secret in Vault as recovery_cron_secret, and the backend URL as recovery_backend_url.
@@ -17,6 +18,7 @@ do $$ begin
      headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||(select decrypted_secret from vault.decrypted_secrets where name='recovery_cron_secret')),
      body:='{}'::jsonb,timeout_milliseconds:=60000
     )$job$);
+   update public.recovery_runtime set dispatch_registered=true,registered_at=now() where id;
   end if;
  end if;
 end $$;

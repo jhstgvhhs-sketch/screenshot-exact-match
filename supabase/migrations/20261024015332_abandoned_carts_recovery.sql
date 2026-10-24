@@ -5,6 +5,12 @@ create table public.recovery_settings (
 );
 insert into public.recovery_settings(config) values ('{"enabled":false,"dry_run":true,"whatsapp_enabled":false,"email_enabled":false,"timezone":"America/Bahia","start_hour":9,"end_hour":20,"retention_days":30,"max_attempts":3,"suppress_pending_pix":true,"email_from":"","steps":[{"minutes":30,"subject":"Seu carrinho na 3DFLEX","text":"Olá, {nome}! 👋\n\nPercebemos que você deixou alguns produtos no carrinho da 3DFLEX.\n\nSeus filamentos estão a poucos passos de chegar até você!\n\n🛒 Continue sua compra por aqui:\n{link_recuperacao}\n\nSe precisar de ajuda, estamos à disposição.","wa_template":"","wa_language":"pt_BR"},{"minutes":1440,"subject":"Continue sua compra na 3DFLEX","text":"Olá, {nome}!\n\nPassando para lembrar que sua compra na 3DFLEX ainda não foi finalizada.\n\nVocê pode conferir seus produtos e concluir seu pedido pelo link:\n\n{link_recuperacao}\n\nQualquer dúvida sobre os filamentos, podemos ajudar!","wa_template":"","wa_language":"pt_BR"},{"minutes":4320,"subject":"Último lembrete do seu carrinho na 3DFLEX","text":"Olá, {nome}!\n\nEste é nosso último lembrete sobre os produtos que você selecionou na 3DFLEX.\n\nSe ainda tiver interesse, é só acessar:\n\n{link_recuperacao}\n\nSerá um prazer atender você!","wa_template":"","wa_language":"pt_BR"}]}'::jsonb);
 
+create table public.recovery_runtime (
+ id boolean primary key default true check(id), sweep_registered boolean not null default false,
+ dispatch_registered boolean not null default false, registered_at timestamptz, last_sweep_at timestamptz
+);
+insert into public.recovery_runtime(id) values(true);
+
 create table public.recovery_carts (
  id uuid primary key default gen_random_uuid(), session_hash text not null unique,
  owner_id uuid references public.profiles(id) on delete set null,
@@ -63,7 +69,7 @@ create table public.recovery_rate_limits (
 
 -- No anonymous or customer SELECT on any customer data, tokens, logs, or credentials.
 do $$ declare t text; begin
- foreach t in array array['recovery_settings','recovery_carts','recovery_consents','recovery_suppressions','recovery_links','recovery_jobs','recovery_attempts','recovery_rate_limits'] loop
+ foreach t in array array['recovery_settings','recovery_runtime','recovery_carts','recovery_consents','recovery_suppressions','recovery_links','recovery_jobs','recovery_attempts','recovery_rate_limits'] loop
   execute format('revoke all on public.%I from anon, authenticated',t);
   execute format('grant select on public.%I to authenticated',t);
   execute format('grant all on public.%I to service_role',t);
@@ -172,6 +178,7 @@ declare cfg jsonb;
 begin
  perform pg_advisory_xact_lock(730019911);
  select config into cfg from recovery_settings where id;
+ update recovery_runtime set last_sweep_at=now() where id;
  perform recovery_reconcile();
  update recovery_carts set status='expired',sequence_cancelled=true where expires_at<=now() and status<>'recovered';
  update recovery_carts set status='abandoned',abandoned_at=last_activity_at+interval '30 minutes'
@@ -244,14 +251,11 @@ create function public.recovery_metrics() returns jsonb language sql stable set 
   'rate',coalesce(round(100.0*count(*) filter(where status='recovered' and abandoned_at is not null)/nullif(count(*) filter(where abandoned_at is not null),0),2),0)
  ) from recovery_carts where parent_id is null;
 $$;
-create function public.recovery_scheduler_status() returns jsonb language plpgsql stable security definer set search_path=public as $$
-declare sweep boolean:=false; dispatch boolean:=false;
-begin
- if to_regclass('cron.job') is not null then
-  execute 'select exists(select 1 from cron.job where jobname=''3dflex-recovery-sweep'' and active), exists(select 1 from cron.job where jobname=''3dflex-recovery-dispatch'' and active)' into sweep,dispatch;
- end if;
- return jsonb_build_object('sweep',sweep,'dispatch',dispatch);
-end $$;
+-- Deployment registration only: no reads of protected Cloud scheduler schemas.
+create function public.recovery_scheduler_status() returns jsonb language sql stable set search_path=public as $$
+ select jsonb_build_object('sweep',sweep_registered,'dispatch',dispatch_registered,
+  'registeredAt',registered_at,'lastSweepAt',last_sweep_at) from recovery_runtime where id;
+$$;
 revoke all on function public.recovery_order_changed() from public,anon,authenticated;
 do $$ declare f record; begin
  for f in select p.oid::regprocedure signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('recovery_reconcile','recovery_sync','recovery_tick','recovery_eligible','recovery_claim','recovery_stop','recovery_metrics','recovery_scheduler_status','recovery_rate_allow') loop
