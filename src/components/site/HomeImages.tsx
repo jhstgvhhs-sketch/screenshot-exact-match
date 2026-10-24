@@ -58,7 +58,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/20"
       />
-      <div className="container-x pointer-events-none relative px-12 py-20 md:py-36">
+      <div className="container-x pointer-events-none relative flex min-h-[320px] items-center px-6 pt-10 pb-24 sm:min-h-[380px] sm:px-12 md:py-36">
         <HomeHeroText image={images[index]} />
       </div>
       {images.length > 1 && (
@@ -67,7 +67,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
             type="button"
             aria-label="Imagem anterior"
             onClick={() => setSelected((index + images.length - 1) % images.length)}
-            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/80 p-2 text-white focus-visible:outline focus-visible:outline-primary"
+            className="absolute bottom-3 left-4 rounded-full bg-black/80 p-2 md:bottom-auto md:left-2 md:top-1/2 md:-translate-y-1/2 text-white focus-visible:outline focus-visible:outline-primary"
           >
             <ChevronLeft />
           </button>
@@ -75,11 +75,11 @@ export function HomeImages({ children }: { children: ReactNode }) {
             type="button"
             aria-label="Próxima imagem"
             onClick={() => setSelected((index + 1) % images.length)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/80 p-2 text-white focus-visible:outline focus-visible:outline-primary"
+            className="absolute bottom-3 right-4 rounded-full bg-black/80 p-2 md:bottom-auto md:right-2 md:top-1/2 md:-translate-y-1/2 text-white focus-visible:outline focus-visible:outline-primary"
           >
             <ChevronRight />
           </button>
-          <div className="relative flex items-center justify-center gap-3 pb-4">
+          <div className="absolute inset-x-16 bottom-3 flex min-h-10 flex-wrap items-center justify-center gap-2 md:inset-x-20 md:bottom-4 md:gap-3">
             <button
               type="button"
               aria-label={paused || reducedMotion ? "Reproduzir carrossel" : "Pausar carrossel"}
@@ -119,16 +119,26 @@ export function HomeHeroText({ image }: { image?: HomeImage }) {
   const title = image?.title ?? DEFAULT_HOME_COPY.title;
   const description = image?.description ?? DEFAULT_HOME_COPY.description;
   return (
-    <div className="max-w-xl min-h-64 break-words">
-      {eyebrow && <p className="mb-4 text-xs font-bold tracking-[0.3em] text-primary">{eyebrow}</p>}
+    <div className="w-full max-w-xl break-words md:min-h-64">
+      {eyebrow && (
+        <p className="mb-3 text-[10px] font-bold tracking-[0.22em] sm:text-xs md:mb-4 md:tracking-[0.3em] text-primary">
+          {eyebrow}
+        </p>
+      )}
       <h1
         className={
-          title ? "text-4xl font-extrabold leading-[1.05] text-white md:text-6xl" : "sr-only"
+          title
+            ? "text-[clamp(1.5rem,6.5vw,2rem)] font-extrabold leading-[1.1] text-white sm:text-4xl md:text-6xl md:leading-[1.05]"
+            : "sr-only"
         }
       >
         {title || "3DFLEX"}
       </h1>
-      {description && <p className="mt-5 text-lg text-white/85">{description}</p>}
+      {description && (
+        <p className="mt-4 max-w-md text-sm leading-relaxed text-white/85 sm:text-base md:mt-5 md:text-lg">
+          {description}
+        </p>
+      )}
     </div>
   );
 }
