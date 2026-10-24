@@ -39,7 +39,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
     <section
       aria-label="Imagens em destaque"
       aria-roledescription="carrossel"
-      className="relative grid min-h-[320px] overflow-hidden border-b border-border bg-black md:h-[650px]"
+      className="relative grid overflow-hidden border-b border-border bg-black md:h-[650px]"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocusCapture={() => setFocused(true)}
@@ -52,9 +52,9 @@ export function HomeImages({ children }: { children: ReactNode }) {
         src={images[index].url}
         alt={images[index].alt}
         fetchPriority="high"
-        className="absolute inset-0 block h-full w-full object-cover object-center"
+        className="col-start-1 row-start-1 block h-auto w-full self-center object-contain md:absolute md:inset-0 md:h-full md:object-cover"
       />
-      <div className="container-x pointer-events-none relative col-start-1 row-start-1 flex min-h-[320px] items-center px-6 pt-10 pb-24 sm:min-h-[380px] sm:px-12 md:py-36">
+      <div className="container-x pointer-events-none relative col-start-1 row-start-1 flex items-center px-6 pt-4 pb-16 sm:px-12 md:py-36">
         <HomeHeroText image={images[index]} />
       </div>
       {images.length > 1 && (
@@ -124,14 +124,14 @@ export function HomeHeroText({ image }: { image?: HomeImage }) {
       <h1
         className={
           title
-            ? "text-[clamp(1.5rem,6.5vw,2rem)] font-extrabold leading-[1.1] text-white sm:text-4xl md:text-6xl md:leading-[1.05]"
+            ? "text-[clamp(1.25rem,5.5vw,1.75rem)] font-extrabold leading-[1.1] text-white sm:text-4xl md:text-6xl md:leading-[1.05]"
             : "sr-only"
         }
       >
         {title || "3DFLEX"}
       </h1>
       {description && (
-        <p className="mt-4 max-w-md text-sm leading-relaxed text-white/85 sm:text-base md:mt-5 md:text-lg">
+        <p className="mt-3 max-w-md text-xs leading-relaxed text-white/85 sm:text-base md:mt-5 md:text-lg">
           {description}
         </p>
       )}
