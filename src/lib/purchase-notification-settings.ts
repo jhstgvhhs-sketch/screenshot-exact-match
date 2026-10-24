@@ -8,12 +8,23 @@ export type PurchaseNotificationSettings = {
   display_seconds: number; interval_seconds: number;
 };
 export const defaultPurchaseSettings: PurchaseNotificationSettings = {
-  enabled: true, title: "Compra realizada!",
-  messages: [{ text: "Um cliente comprou filamentos na 3DFLEX.", enabled: true }],
+  enabled: true, title: "Destaque 3DFLEX",
+  messages: [{ text: "Encontre a cor ideal para seu próximo projeto. Conheça nossos filamentos!", enabled: true }],
   display_seconds: 6, interval_seconds: 60,
 };
 export const PURCHASE_SETTINGS_KEY = ["purchase-notification-settings"];
 export const purchaseSettingsTable = () => (supabase as unknown as SupabaseClient).from("purchase_notification_settings");
+
+const purchaseClaim = /(?:compra|pedido)\s+(?:realizad[oa]|confirmad[oa])|pagamento\s+confirmado|acab(?:ou|aram)\s+de\s+comprar|(?:cliente|pessoa|alguém).{0,40}(?:comprou|compraram|comprando)/i;
+
+// Older saved purchase notices must never become fabricated sale events.
+export function promotionalSettings(value: PurchaseNotificationSettings): PurchaseNotificationSettings {
+  return {
+    ...value,
+    title: purchaseClaim.test(value.title) ? defaultPurchaseSettings.title : value.title,
+    messages: value.messages.map(message => ({ ...message, text: purchaseClaim.test(message.text) ? defaultPurchaseSettings.messages[0].text : message.text })),
+  };
+}
 
 export function validatePurchaseSettings(value: PurchaseNotificationSettings): PurchaseNotificationSettings {
   if (!Number.isInteger(value.display_seconds) || value.display_seconds < 3 || value.display_seconds > 20)
@@ -29,6 +40,8 @@ export function validatePurchaseSettings(value: PurchaseNotificationSettings): P
     if (!text || text.length > 180 || typeof message.enabled !== "boolean") throw new Error("Cada mensagem deve ter de 1 a 180 caracteres.");
     return { text, enabled: message.enabled };
   });
+  if (purchaseClaim.test(title) || messages.some(message => purchaseClaim.test(message.text)))
+    throw new Error("Use mensagens promocionais, sem afirmar compras ou pagamentos de clientes.");
   if (value.enabled && !messages.some(message => message.enabled)) throw new Error("Ative pelo menos uma mensagem ou desligue os avisos.");
   return { enabled: value.enabled === true, title, messages, display_seconds: value.display_seconds, interval_seconds: value.interval_seconds };
 }
@@ -39,7 +52,7 @@ export function usePurchaseNotificationSettings() {
     queryFn: async () => {
       const { data, error } = await purchaseSettingsTable().select("enabled,title,messages,display_seconds,interval_seconds").eq("id", "main").maybeSingle();
       if (error) throw error;
-      return validatePurchaseSettings(data ?? defaultPurchaseSettings);
+      return validatePurchaseSettings(promotionalSettings(data ?? defaultPurchaseSettings));
     },
     staleTime: 30000, refetchInterval: 60000, retry: 1,
   });
