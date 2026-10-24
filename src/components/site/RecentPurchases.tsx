@@ -38,7 +38,7 @@ export function RecentPurchases() {
   if (!allowed || dismissed || settings.isError || !config?.enabled || !messages.length || !purchase) return null;
   return <aside role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-4 left-4 z-40 flex w-[calc(100%-2rem)] max-w-sm gap-3 rounded-xl border border-primary/30 bg-card p-4 text-card-foreground shadow-xl motion-safe:animate-in motion-safe:slide-in-from-bottom-2">
     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary"><ShoppingBag className="h-5 w-5" aria-hidden="true"/></span>
-    <div className="min-w-0 flex-1"><p className="text-sm font-bold">{config.title}</p><p className="mt-1 text-sm">{messages[purchase.messageIndex % messages.length]?.text}</p><p className="mt-1 text-xs text-muted-foreground">Mensagem promocional da loja</p></div>
+    <div className="min-w-0 flex-1"><p className="text-sm font-bold">{config.title}</p><p className="mt-1 text-sm">{messages[purchase.messageIndex % messages.length]?.text}</p><p className="mt-1 text-xs text-muted-foreground">Mensagem do sistema</p></div>
     <button type="button" aria-label="Fechar mensagens promocionais" className="-mr-1 -mt-1 h-8 w-8 shrink-0 rounded-md p-2 text-muted-foreground hover:bg-muted" onClick={() => { setDismissed(true); setPurchase(null); try { sessionStorage.setItem(DISMISSED, "true"); } catch { /* Optional. */ } }}><X className="h-4 w-4" aria-hidden="true"/></button>
   </aside>;
 }

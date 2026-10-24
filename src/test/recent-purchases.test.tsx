@@ -13,7 +13,7 @@ describe("Promotional notifications", () => {
   it("shows promotions without requesting purchase events and respects display duration", async () => {
     render(<RecentPurchases/>);
     await act(async () => { await vi.advanceTimersByTimeAsync(8000); });
-    expect(screen.getByText("Mensagem promocional da loja")).toBeInTheDocument();
+    expect(screen.getByText("Mensagem do sistema")).toBeInTheDocument();
     expect(mocks.invoke).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
     expect(screen.queryByRole("status")).toBeNull();

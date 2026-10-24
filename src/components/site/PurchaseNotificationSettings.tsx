@@ -46,7 +46,7 @@ function NotificationForm({ current, onSaved }: { current: Settings; onSaved: ()
         </div>)}
         <button type="button" disabled={fields.messages.length >= 6} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40" onClick={() => setFields({ ...fields, messages: [...fields.messages, { text: "", enabled: true }] })}>Adicionar mensagem</button>
       </div>
-      <div className="rounded-lg border border-primary/30 bg-background p-4"><p className="mb-3 text-xs text-muted-foreground">Prévia da mensagem promocional</p><div className="flex gap-3"><ShoppingBag aria-hidden="true" className="h-6 w-6 shrink-0 text-primary"/><div><p className="text-sm font-bold">{fields.title}</p><p className="mt-1 text-sm">{fields.messages.find(message => message.enabled)?.text || "Nenhuma mensagem ativa"}</p><p className="mt-1 text-xs text-muted-foreground">Mensagem promocional da loja</p></div></div></div>
+      <div className="rounded-lg border border-primary/30 bg-background p-4"><p className="mb-3 text-xs text-muted-foreground">Prévia da mensagem promocional</p><div className="flex gap-3"><ShoppingBag aria-hidden="true" className="h-6 w-6 shrink-0 text-primary"/><div><p className="text-sm font-bold">{fields.title}</p><p className="mt-1 text-sm">{fields.messages.find(message => message.enabled)?.text || "Nenhuma mensagem ativa"}</p><p className="mt-1 text-xs text-muted-foreground">Mensagem do sistema</p></div></div></div>
       <button type="submit" className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground">{busy ? "Salvando…" : "Salvar notificações"}</button>
     </fieldset>
     {feedback && <p role="status" className="text-sm">{feedback}</p>}
