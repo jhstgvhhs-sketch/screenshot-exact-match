@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { DEFAULT_HOME_COPY, type HomeImage } from "@/lib/home-images";
 import { useStoreSettings } from "./StoreSettings";
 
 export function HomeImages({ children }: { children: ReactNode }) {
@@ -58,7 +59,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
         className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/20"
       />
       <div className="container-x pointer-events-none relative px-12 py-20 md:py-36">
-        <HomeHeroText />
+        <HomeHeroText image={images[index]} />
       </div>
       {images.length > 1 && (
         <>
@@ -113,16 +114,21 @@ export function HomeImages({ children }: { children: ReactNode }) {
   );
 }
 
-export function HomeHeroText() {
+export function HomeHeroText({ image }: { image?: HomeImage }) {
+  const eyebrow = image?.eyebrow ?? DEFAULT_HOME_COPY.eyebrow;
+  const title = image?.title ?? DEFAULT_HOME_COPY.title;
+  const description = image?.description ?? DEFAULT_HOME_COPY.description;
   return (
-    <div className="max-w-xl">
-      <p className="mb-4 text-xs font-bold tracking-[0.3em] text-primary">IMPRESSÃO 3D</p>
-      <h1 className="text-4xl font-extrabold leading-[1.05] text-white md:text-6xl">
-        SUA PRÓXIMA CRIAÇÃO COMEÇA AQUI.
+    <div className="max-w-xl min-h-64 break-words">
+      {eyebrow && <p className="mb-4 text-xs font-bold tracking-[0.3em] text-primary">{eyebrow}</p>}
+      <h1
+        className={
+          title ? "text-4xl font-extrabold leading-[1.05] text-white md:text-6xl" : "sr-only"
+        }
+      >
+        {title || "3DFLEX"}
       </h1>
-      <p className="mt-5 text-lg text-white/85">
-        Filamentos PLA, PETG e acessórios para transformar suas ideias em realidade.
-      </p>
+      {description && <p className="mt-5 text-lg text-white/85">{description}</p>}
     </div>
   );
 }

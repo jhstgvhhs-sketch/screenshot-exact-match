@@ -2,7 +2,13 @@ import { useState, type ChangeEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import hero from "@/assets/hero.jpg";
-import { MAX_HOME_IMAGES, validateHomeImages, type HomeImage } from "@/lib/home-images";
+import {
+  DEFAULT_HOME_COPY,
+  HOME_COPY_FIELDS,
+  MAX_HOME_IMAGES,
+  validateHomeImages,
+  type HomeImage,
+} from "@/lib/home-images";
 
 export function HomeImagesEditor({
   current,
@@ -49,7 +55,7 @@ export function HomeImagesEditor({
       edit(
         replace === undefined
           ? [...(images ?? []), next]
-          : (images ?? []).map((image, i) => (i === replace ? next : image)),
+          : (images ?? []).map((image, i) => (i === replace ? { ...image, ...next } : image)),
       );
       setMessage(
         "Imagem carregada. Clique em Salvar imagens da página inicial para exibi-la no site.",
@@ -89,8 +95,8 @@ export function HomeImagesEditor({
       <p className="text-sm text-muted-foreground">
         Controle a imagem grande no topo da loja. Adicione até {MAX_HOME_IMAGES} imagens; o
         carrossel passa automaticamente a cada 7 segundos e permite avançar ou voltar pelas setas. O
-        texto da loja aparece sobre as imagens. Use fotos sem texto e mantenha os elementos
-        importantes no centro.
+        texto de cada imagem aparece sobre ela e pode ser editado nos campos abaixo. Use fotos sem
+        texto e mantenha os elementos importantes no centro.
       </p>
       <fieldset disabled={busy} className="space-y-4">
         {images === null ? (
@@ -126,6 +132,27 @@ export function HomeImagesEditor({
                   }
                 />
               </label>
+              <p className="text-xs text-muted-foreground">
+                Texto exclusivo desta imagem. Deixe um campo vazio para ocultá-lo.
+              </p>
+              {HOME_COPY_FIELDS.map((field) => (
+                <label key={field.key} className="block text-sm">
+                  {field.label} da imagem {index + 1}
+                  <textarea
+                    rows={field.key === "description" ? 3 : 2}
+                    maxLength={field.limit}
+                    className="mt-1 w-full rounded-lg border bg-background p-3"
+                    value={image[field.key] ?? DEFAULT_HOME_COPY[field.key]}
+                    onChange={(event) =>
+                      edit(
+                        images.map((value, i) =>
+                          i === index ? { ...value, [field.key]: event.target.value } : value,
+                        ),
+                      )
+                    }
+                  />
+                </label>
+              ))}
               <div className="flex flex-wrap gap-4 text-sm">
                 <label className="cursor-pointer text-primary underline">
                   Trocar imagem {index + 1}

@@ -103,6 +103,48 @@ describe("Homepage image management", () => {
     act(() => vi.advanceTimersByTime(7000));
     expect(screen.getByRole("img")).toHaveAttribute("src", second.url);
   });
+  it("changes each image's own text with automatic and manual navigation", () => {
+    vi.useFakeTimers();
+    mocks.images = [
+      { ...first, title: "Filamentos PLA", eyebrow: "CORES", description: "Escolha seu PLA" },
+      {
+        ...second,
+        title: "Impressoras 3D",
+        eyebrow: "MÁQUINAS",
+        description: "Conheça as impressoras",
+      },
+    ];
+    render(<HomeImages>Original</HomeImages>);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Filamentos PLA");
+    act(() => vi.advanceTimersByTime(7000));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Impressoras 3D");
+    expect(screen.getByText("Conheça as impressoras")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Imagem anterior"));
+    expect(screen.getByText("Escolha seu PLA")).toBeInTheDocument();
+    expect(screen.queryByText("Conheça as impressoras")).toBeNull();
+  });
+  it("saves different copy for each image including intentionally empty fields", async () => {
+    render(<HomeImagesEditor current={[first, second]} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Título da imagem 1"), {
+      target: { value: "Filamentos PLA" },
+    });
+    fireEvent.change(screen.getByLabelText("Título da imagem 2"), {
+      target: { value: "Impressoras 3D" },
+    });
+    fireEvent.change(screen.getByLabelText("Chamada da imagem 2"), { target: { value: "" } });
+    fireEvent.click(screen.getByText("Salvar imagens da página inicial"));
+    await waitFor(() =>
+      expect(mocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          homepage_images: [
+            { ...first, title: "Filamentos PLA" },
+            { ...second, title: "Impressoras 3D", eyebrow: "" },
+          ],
+        }),
+      ),
+    );
+    expect(() => validateHomeImages([{ ...first, title: "x".repeat(121) }])).toThrow(/120/);
+  });
   it("removes a selected image and persists only the homepage setting", async () => {
     const saved = vi.fn();
     render(<HomeImagesEditor current={[first, second]} onSaved={saved} />);
