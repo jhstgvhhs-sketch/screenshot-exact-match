@@ -56,6 +56,21 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_preferences: {
+        Row: {
+          id: string
+          low_stock_limit: number
+        }
+        Insert: {
+          id: string
+          low_stock_limit?: number
+        }
+        Update: {
+          id?: string
+          low_stock_limit?: number
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           description: string | null
@@ -114,6 +129,7 @@ export type Database = {
         Row: {
           color: string
           id: string
+          material_snapshot: string | null
           order_id: string
           product_id: string | null
           product_name: string
@@ -126,6 +142,7 @@ export type Database = {
         Insert: {
           color: string
           id?: string
+          material_snapshot?: string | null
           order_id: string
           product_id?: string | null
           product_name: string
@@ -138,6 +155,7 @@ export type Database = {
         Update: {
           color?: string
           id?: string
+          material_snapshot?: string | null
           order_id?: string
           product_id?: string | null
           product_name?: string
@@ -157,12 +175,6 @@ export type Database = {
           },
         ]
       }
-      admin_preferences: {
-        Row: { id: string; low_stock_limit: number }
-        Insert: { id: string; low_stock_limit?: number }
-        Update: { low_stock_limit?: number }
-        Relationships: []
-      }
       orders: {
         Row: {
           archived_at: string | null
@@ -174,6 +186,7 @@ export type Database = {
           customer_phone: string
           discount: number
           id: string
+          paid_at: string | null
           payment_method: string | null
           payment_status: string
           ship_cep: string
@@ -188,8 +201,8 @@ export type Database = {
           subtotal: number
           total: number
           tracking_carrier: string | null
-          tracking_url: string | null
           tracking_code: string | null
+          tracking_url: string | null
           user_id: string
         }
         Insert: {
@@ -202,6 +215,7 @@ export type Database = {
           customer_phone: string
           discount?: number
           id?: string
+          paid_at?: string | null
           payment_method?: string | null
           payment_status?: string
           ship_cep: string
@@ -216,8 +230,8 @@ export type Database = {
           subtotal: number
           total: number
           tracking_carrier?: string | null
-          tracking_url?: string | null
           tracking_code?: string | null
+          tracking_url?: string | null
           user_id: string
         }
         Update: {
@@ -230,6 +244,7 @@ export type Database = {
           customer_phone?: string
           discount?: number
           id?: string
+          paid_at?: string | null
           payment_method?: string | null
           payment_status?: string
           ship_cep?: string
@@ -244,8 +259,8 @@ export type Database = {
           subtotal?: number
           total?: number
           tracking_carrier?: string | null
-          tracking_url?: string | null
           tracking_code?: string | null
+          tracking_url?: string | null
           user_id?: string
         }
         Relationships: []
@@ -816,6 +831,104 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_email_attempts: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_id: string | null
+          http_status: number | null
+          id: number
+          notification_id: string | null
+          order_id: string
+          result_code: string
+          state: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          http_status?: number | null
+          id?: never
+          notification_id?: string | null
+          order_id: string
+          result_code: string
+          state: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          http_status?: number | null
+          id?: never
+          notification_id?: string | null
+          order_id?: string
+          result_code?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_email_attempts_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_email_notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_email_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_email_notifications: {
+        Row: {
+          attempts: number
+          created_at: string
+          fingerprint: string
+          http_status: number | null
+          id: string
+          order_id: string
+          provider_id: string | null
+          result_code: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          fingerprint: string
+          http_status?: number | null
+          id?: string
+          order_id: string
+          provider_id?: string | null
+          result_code: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          fingerprint?: string
+          http_status?: number | null
+          id?: string
+          order_id?: string
+          provider_id?: string | null
+          result_code?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_email_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -839,6 +952,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_customer_page: {
+        Args: { p_page?: number; p_search?: string }
+        Returns: Json
+      }
+      admin_financial_report: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
+      admin_order_page: {
+        Args: {
+          p_archived?: boolean
+          p_filter?: string
+          p_page?: number
+          p_search?: string
+          p_user?: string
+        }
+        Returns: Json
+      }
+      admin_save_tracking: {
+        Args: {
+          p_carrier: string
+          p_code: string
+          p_order: string
+          p_url: string
+        }
+        Returns: boolean
+      }
       archive_order_admin: { Args: { p_order_id: string }; Returns: boolean }
       check_coupon: { Args: { _code: string }; Returns: Json }
       has_role: {
@@ -919,6 +1059,11 @@ export type Database = {
         }
         Returns: string
       }
+      tracking_email_claim: {
+        Args: { p_fingerprint: string; p_order: string }
+        Returns: Json
+      }
+      valid_tracking_url: { Args: { p_url: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

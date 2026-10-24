@@ -1,5 +1,4 @@
-import { CustomerOrders } from "@/components/CustomerOrders";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -141,5 +140,13 @@ function CustomerAddresses({userId}:{userId:string}) {
    {([{k:"label",t:"Identificação (casa, trabalho)",required:false},{k:"cep",t:"CEP",required:true},{k:"street",t:"Rua / avenida",required:true},{k:"number",t:"Número",required:true},{k:"complement",t:"Complemento",required:false},{k:"district",t:"Bairro",required:true},{k:"city",t:"Cidade",required:true},{k:"state",t:"UF",required:true}] as const).map(f=><label key={f.k} className="text-sm">{f.t}<input name={f.k} required={f.required} maxLength={f.k==="state"?2:160} className={input}/></label>)}
    <button disabled={busy} className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50 sm:col-span-2">{busy?"Salvando...":"Salvar endereço"}</button>
   </form>{message&&<p role="status" className="text-sm">{message}</p>}
+ </div>;
+}
+const orderStatusPt: Record<string,string> = {pending:"Pendente",aguardando_pagamento:"Aguardando pagamento",processing:"Em preparação",shipped:"Enviado",delivered:"Entregue",cancelled:"Cancelado",cancelado:"Cancelado"};
+const paymentStatusPt: Record<string,string> = {pending:"Pendente",pendente:"Pendente",paid:"Pago",pago:"Pago",cancelado:"Cancelado",expirado:"Expirado"};
+function CustomerOrders({userId}:{userId:string}) {
+ const {data=[],isLoading,error}=useQuery({queryKey:["customer-orders",userId],queryFn:async()=>{const r=await supabase.from("orders").select("id,created_at,status,payment_status,total,tracking_code,ship_city,ship_state").eq("user_id",userId).order("created_at",{ascending:false});if(r.error)throw r.error;return r.data;}});
+ return <div className="mt-6 space-y-4"><h2 className="text-xl font-bold">Meus pedidos</h2>
+  {isLoading?<p>Carregando pedidos...</p>:error?<p className="text-destructive">Não foi possível consultar os pedidos. Verifique as permissões da conta.</p>:data.length===0?<div className="rounded-xl border border-border bg-card p-5"><p>Você ainda não tem pedidos registrados nesta conta.</p><p className="mt-2 text-sm text-muted-foreground">Pedidos feitos fora da conta ou ainda não registrados pelo checkout não aparecem aqui.</p><Link to="/produtos" className="mt-4 inline-block text-primary underline">Ver produtos</Link></div>:data.map(o=><article key={o.id} className="rounded-xl border border-border bg-card p-5"><p className="font-bold">Pedido {o.id.slice(0,8).toUpperCase()}</p><p className="mt-2 text-sm text-muted-foreground">{new Date(o.created_at).toLocaleDateString("pt-BR")} · {o.ship_city}/{o.ship_state}</p><p className="mt-2">Total: <strong>{brl(Number(o.total))}</strong></p><p className="mt-1 text-sm">Status: {orderStatusPt[o.status] ?? o.status} · Pagamento: {paymentStatusPt[o.payment_status] ?? o.payment_status}</p>{o.tracking_code&&<p className="mt-2 text-sm">Código de rastreio: {o.tracking_code}</p>}</article>)}
  </div>;
 }

@@ -4,7 +4,6 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -122,20 +121,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const isAdminRoute = useRouterState({ select: state => state.location.pathname === "/admin" || state.location.pathname.startsWith("/admin/") });
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <CartProvider>
-          {isAdminRoute ? <Outlet /> : <>
           <Header />
           <main className="min-h-[60vh]">
             <Outlet />
           </main>
           <Footer />
           <RecentPurchases />
-          </>}
           <Toaster richColors position="top-center" />
         </CartProvider>
       </AuthProvider>

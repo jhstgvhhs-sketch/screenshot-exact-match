@@ -11,49 +11,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let active = true;
-    let revision = 0;
-    const load = async (u: User | null, expected: number) => {
-      if (!active || expected !== revision) return;
-      let authorized = false;
-      try {
-        if (u) {
-          const { data, error } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", u.id)
-            .eq("role", "admin")
-            .maybeSingle();
-          authorized = !error && !!data;
-        }
-      } catch {
-        authorized = false;
-      }
-      if (!active || expected !== revision) return;
-      setIsAdmin(authorized);
+    const load = async (u: User | null) => {
+      setUser(u);
+      if (u) {
+        const { data } = await supabase.from("user_roles").select("role").eq("user_id", u.id).eq("role", "admin").maybeSingle();
+        setIsAdmin(!!data);
+      } else setIsAdmin(false);
       setLoading(false);
     };
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (
-        event === "SIGNED_IN" ||
-        event === "SIGNED_OUT" ||
-        event === "USER_UPDATED" ||
-        event === "INITIAL_SESSION"
-      ) {
-        const expected = ++revision;
-        const nextUser = session?.user ?? null;
-        // Never carry a previous account's administrative flag into another session.
-        setIsAdmin(false);
-        setLoading(true);
-        setUser(nextUser);
-        setTimeout(() => void load(nextUser, expected), 0);
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+        setTimeout(() => load(session?.user ?? null), 0);
       }
     });
-    return () => {
-      active = false;
-      revision++;
-      sub.subscription.unsubscribe();
-    };
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   return <AuthCtx.Provider value={{ user, isAdmin, loading }}>{children}</AuthCtx.Provider>;

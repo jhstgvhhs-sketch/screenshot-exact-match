@@ -4,5 +4,5 @@
     "moduleResolution": "Bundler", "strict": true, "skipLibCheck": true,
     "allowImportingTsExtensions": true, "noEmit": true, "types": ["node"]
   },
-  "include": ["recovery-*/**/*.ts", "tracking-*/**/*.ts", "_shared/tracking-*.ts", "_shared/recovery-*.ts", "recovery-edge.d.ts"]
+  "include": ["recovery-*/**/*.ts", "_shared/recovery-*.ts", "recovery-edge.d.ts"]
 }
