@@ -1,3 +1,4 @@
+import { ReviewCard } from "./ReviewCard";
 import { useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,10 +38,7 @@ export function ProductReviews({ productId }: { productId: string }) {
     <h2 className="text-2xl font-bold">Avaliações de clientes</h2>
     <p className="mt-2 text-muted-foreground">{average ? `★ ${average}/5 · ${reviews.length} avaliação(ões)` : "Ainda não há avaliações publicadas."}</p>
     {isError && <p className="mt-3 text-sm text-destructive">Avaliações indisponíveis. Verifique a configuração do banco.</p>}
-    <div className="mt-5 grid gap-4 md:grid-cols-2">{reviews.map(r => <article key={r.id} className="rounded-xl border border-border bg-card p-4">
-      <p className="font-semibold">{r.author_name} {r.source === "admin" && <span className="text-xs font-normal text-muted-foreground">(feedback cadastrado pela loja)</span>} <span className="text-primary">{"★".repeat(r.rating)}{"☆".repeat(5-r.rating)}</span></p>
-      <p className="mt-2 whitespace-pre-wrap text-sm">{r.comment}</p>
-    </article>)}</div>
+    <div className="mt-5 grid gap-4 md:grid-cols-2">{reviews.map(review => <ReviewCard key={review.id} review={review}/>)}</div>
     <form onSubmit={submit} className="mt-8 max-w-xl space-y-4 rounded-xl border border-border bg-card p-5">
       <h3 className="font-bold">Deixe sua avaliação</h3>
       {!user && <p className="text-sm text-muted-foreground">Entre na sua conta para enviar uma avaliação.</p>}

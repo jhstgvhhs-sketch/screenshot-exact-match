@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Truck, ShieldCheck, CreditCard, MapPin, ArrowRight } from "lucide-react";
 import { HomeImages, HomeHeroText } from "@/components/site/HomeImages";
+import { SiteReviews } from "@/components/site/SiteReviews";
 import hero from "@/assets/hero.jpg";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/site/ProductCard";
@@ -98,6 +99,8 @@ function Index() {
           );
         })}
       </section>
+
+      <SiteReviews />
 
       <section className="container-x mt-16">
         <h2 className="text-2xl font-bold md:text-3xl">Dicas de impressão 3D</h2>

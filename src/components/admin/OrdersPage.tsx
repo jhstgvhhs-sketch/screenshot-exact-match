@@ -1,4 +1,5 @@
 import { OrderGifts } from "@/components/OrderGifts";
+import { RemoveOrderButton } from "./RemoveOrderButton";
 import { useState, useEffect } from "react";
 import { OrderTracking } from "./OrderTracking";
 import { missingTrackingColumns } from "@/lib/tracking";
@@ -183,10 +184,11 @@ export function OrdersPage({
                     <td className="p-2">
                       <Status>{label(o.status)}</Status>
                     </td>
-                    <td className="p-2">
+                    <td className="space-y-2 p-2">
                       <button className={action} onClick={() => setSelected(o.id)}>
                         Detalhes
                       </button>
+                      <RemoveOrderButton orderId={o.id} archived={!!o.archived_at} />
                     </td>
                   </tr>
                 ))}
@@ -258,7 +260,7 @@ function OrderDetails({ id }: { id: string }) {
       setStatus(query.data.status);
     }
   }, [query.data]);
-  async function mutate(mode: "progress" | "paid" | "archive") {
+  async function mutate(mode: "progress" | "paid") {
     if (
       mode === "paid" &&
       !window.confirm(
@@ -266,35 +268,19 @@ function OrderDetails({ id }: { id: string }) {
       )
     )
       return;
-    if (
-      !window.confirm(
-        mode === "archive"
-          ? "Arquivar este pedido sem apagar os registros financeiros ou devolver estoque?"
-          : "Confirmar atualização deste pedido?",
-      )
-    )
-      return;
+    if (!window.confirm("Confirmar atualização deste pedido?")) return;
     setBusy(true);
     setFeedback("");
     try {
-      if (mode === "archive") {
-        const { data, error } = await supabase.rpc(
-          "archive_order_admin" as never,
-          { p_order_id: id } as never,
-        );
-        if (error) throw error;
-        if (!data) throw new Error("O arquivamento não foi confirmado.");
-      } else {
-        const updates = mode === "paid" ? { payment_status: "paid" } : { status };
-        const { data, error } = await supabase
-          .from("orders")
-          .update(updates)
-          .eq("id", id)
-          .select("id")
-          .single();
-        if (error) throw error;
-        if (!data) throw new Error("A alteração não foi confirmada.");
-      }
+      const updates = mode === "paid" ? { payment_status: "paid" } : { status };
+      const { data, error } = await supabase
+        .from("orders")
+        .update(updates)
+        .eq("id", id)
+        .select("id")
+        .single();
+      if (error) throw error;
+      if (!data) throw new Error("A alteração não foi confirmada.");
       setFeedback("Pedido atualizado.");
       await Promise.all(
         [
@@ -369,7 +355,7 @@ function OrderDetails({ id }: { id: string }) {
           <p className="text-sm">
             Subtotal: {brl(o.subtotal)} · Desconto: {brl(o.discount)} · Frete: {brl(o.shipping)}
           </p>
-          <OrderGifts value={o.gift_items}/>
+          <OrderGifts value={o.gift_items} />
           <p className="text-xl font-bold">Total: {brl(o.total)}</p>
           <p>
             {paymentMethod(o.payment_method)} · <Status>{label(o.payment_status)}</Status>
@@ -428,13 +414,7 @@ function OrderDetails({ id }: { id: string }) {
                 Confirmar pagamento recebido
               </button>
             )}
-            <button
-              className={action}
-              disabled={busy || !!o.archived_at}
-              onClick={() => void mutate("archive")}
-            >
-              Arquivar pedido
-            </button>
+            <RemoveOrderButton orderId={o.id} archived={!!o.archived_at} disabled={busy} />
           </div>
           {feedback && <p role="status">{feedback}</p>}
         </div>
