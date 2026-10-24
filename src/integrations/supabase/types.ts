@@ -397,6 +397,368 @@ export type Database = {
         }
         Relationships: []
       }
+      recovery_attempts: {
+        Row: {
+          cart_id: string
+          channel: string
+          created_at: string
+          http_status: number | null
+          id: number
+          job_id: string | null
+          result_code: string
+        }
+        Insert: {
+          cart_id: string
+          channel: string
+          created_at?: string
+          http_status?: number | null
+          id?: never
+          job_id?: string | null
+          result_code: string
+        }
+        Update: {
+          cart_id?: string
+          channel?: string
+          created_at?: string
+          http_status?: number | null
+          id?: never
+          job_id?: string | null
+          result_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_attempts_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_attempts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_carts: {
+        Row: {
+          abandoned_at: string | null
+          created_at: string
+          customer_name: string
+          email: string
+          email_consent: boolean
+          estimated_value: number
+          expires_at: string
+          id: string
+          items: Json
+          last_activity_at: string
+          linked_order_id: string | null
+          owner_id: string | null
+          parent_id: string | null
+          phone: string
+          recovered_at: string | null
+          recovered_order_id: string | null
+          recovered_value: number
+          sequence_cancelled: boolean
+          session_hash: string
+          status: string
+          whatsapp_consent: boolean
+        }
+        Insert: {
+          abandoned_at?: string | null
+          created_at?: string
+          customer_name?: string
+          email?: string
+          email_consent?: boolean
+          estimated_value?: number
+          expires_at?: string
+          id?: string
+          items?: Json
+          last_activity_at?: string
+          linked_order_id?: string | null
+          owner_id?: string | null
+          parent_id?: string | null
+          phone?: string
+          recovered_at?: string | null
+          recovered_order_id?: string | null
+          recovered_value?: number
+          sequence_cancelled?: boolean
+          session_hash: string
+          status?: string
+          whatsapp_consent?: boolean
+        }
+        Update: {
+          abandoned_at?: string | null
+          created_at?: string
+          customer_name?: string
+          email?: string
+          email_consent?: boolean
+          estimated_value?: number
+          expires_at?: string
+          id?: string
+          items?: Json
+          last_activity_at?: string
+          linked_order_id?: string | null
+          owner_id?: string | null
+          parent_id?: string | null
+          phone?: string
+          recovered_at?: string | null
+          recovered_order_id?: string | null
+          recovered_value?: number
+          sequence_cancelled?: boolean
+          session_hash?: string
+          status?: string
+          whatsapp_consent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_carts_linked_order_id_fkey"
+            columns: ["linked_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_carts_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_carts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_carts_recovered_order_id_fkey"
+            columns: ["recovered_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_consents: {
+        Row: {
+          cart_id: string
+          channel: string
+          contact_hash: string
+          created_at: string
+          granted: boolean
+          id: number
+          purpose: string
+          version: string
+        }
+        Insert: {
+          cart_id: string
+          channel: string
+          contact_hash: string
+          created_at?: string
+          granted: boolean
+          id?: never
+          purpose?: string
+          version?: string
+        }
+        Update: {
+          cart_id?: string
+          channel?: string
+          contact_hash?: string
+          created_at?: string
+          granted?: boolean
+          id?: never
+          purpose?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_consents_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_jobs: {
+        Row: {
+          attempts: number
+          cart_id: string
+          channel: string
+          claim_id: string | null
+          claimed_at: string | null
+          completed_at: string | null
+          created_at: string
+          dry_run: boolean
+          due_at: string
+          id: string
+          provider_id: string | null
+          result_code: string | null
+          state: string
+          step: number
+        }
+        Insert: {
+          attempts?: number
+          cart_id: string
+          channel: string
+          claim_id?: string | null
+          claimed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          dry_run: boolean
+          due_at: string
+          id?: string
+          provider_id?: string | null
+          result_code?: string | null
+          state?: string
+          step: number
+        }
+        Update: {
+          attempts?: number
+          cart_id?: string
+          channel?: string
+          claim_id?: string | null
+          claimed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          dry_run?: boolean
+          due_at?: string
+          id?: string
+          provider_id?: string | null
+          result_code?: string | null
+          state?: string
+          step?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_jobs_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_links: {
+        Row: {
+          cart_id: string
+          channel: string | null
+          contact_hash: string | null
+          created_at: string
+          expires_at: string
+          kind: string
+          token_hash: string
+        }
+        Insert: {
+          cart_id: string
+          channel?: string | null
+          contact_hash?: string | null
+          created_at?: string
+          expires_at: string
+          kind: string
+          token_hash: string
+        }
+        Update: {
+          cart_id?: string
+          channel?: string | null
+          contact_hash?: string | null
+          created_at?: string
+          expires_at?: string
+          kind?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_links_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_rate_limits: {
+        Row: {
+          key: string
+          minute: string
+          requests: number
+        }
+        Insert: {
+          key: string
+          minute: string
+          requests: number
+        }
+        Update: {
+          key?: string
+          minute?: string
+          requests?: number
+        }
+        Relationships: []
+      }
+      recovery_runtime: {
+        Row: {
+          dispatch_registered: boolean
+          id: boolean
+          last_sweep_at: string | null
+          registered_at: string | null
+          sweep_registered: boolean
+        }
+        Insert: {
+          dispatch_registered?: boolean
+          id?: boolean
+          last_sweep_at?: string | null
+          registered_at?: string | null
+          sweep_registered?: boolean
+        }
+        Update: {
+          dispatch_registered?: boolean
+          id?: boolean
+          last_sweep_at?: string | null
+          registered_at?: string | null
+          sweep_registered?: boolean
+        }
+        Relationships: []
+      }
+      recovery_settings: {
+        Row: {
+          config: Json
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          config: Json
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recovery_suppressions: {
+        Row: {
+          channel: string
+          contact_hash: string
+          created_at: string
+        }
+        Insert: {
+          channel: string
+          contact_hash: string
+          created_at?: string
+        }
+        Update: {
+          channel?: string
+          contact_hash?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           about: string
@@ -483,6 +845,55 @@ export type Database = {
         }
         Returns: string
       }
+      recovery_claim: {
+        Args: { p_claim: string }
+        Returns: {
+          attempts: number
+          cart_id: string
+          channel: string
+          claim_id: string | null
+          claimed_at: string | null
+          completed_at: string | null
+          created_at: string
+          dry_run: boolean
+          due_at: string
+          id: string
+          provider_id: string | null
+          result_code: string | null
+          state: string
+          step: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "recovery_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      recovery_eligible: { Args: { p_job: string }; Returns: boolean }
+      recovery_metrics: { Args: never; Returns: Json }
+      recovery_rate_allow: {
+        Args: { p_key: string; p_limit: number }
+        Returns: boolean
+      }
+      recovery_reconcile: { Args: { p_user?: string }; Returns: undefined }
+      recovery_scheduler_status: { Args: never; Returns: Json }
+      recovery_stop: {
+        Args: { p_cart: string; p_channel?: string; p_hash?: string }
+        Returns: undefined
+      }
+      recovery_sync: {
+        Args: {
+          p_consents?: Json
+          p_contact?: Json
+          p_hash: string
+          p_items: Json
+          p_parent?: string
+          p_user: string
+        }
+        Returns: string
+      }
+      recovery_tick: { Args: never; Returns: undefined }
       release_unpaid_order_stock: {
         Args: { p_order_id: string; p_payment_status?: string }
         Returns: boolean
