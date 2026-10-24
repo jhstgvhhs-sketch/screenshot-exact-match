@@ -10,8 +10,10 @@ const data={carts:[{id:"local-cart",customer_name:"Cliente local de teste",email
 let client:QueryClient;
 beforeEach(()=>{api.mockImplementation(async body=>body.action==="dashboard"?data:body.action==="link"?{link:"https://shop.test/recuperar#token=opaque"}:{ok:true});client=new QueryClient({defaultOptions:{queries:{retry:false,retryDelay:0,gcTime:0}}});});
 afterEach(()=>{cleanup();client.clear();vi.clearAllMocks();});
-const show=()=>render(<QueryClientProvider client={client}><AbandonedCarts/></QueryClientProvider>);
+const show=(view?:"all"|"carts"|"automation"|"history")=>render(<QueryClientProvider client={client}><AbandonedCarts view={view}/></QueryClientProvider>);
 describe("Abandoned carts administration",()=>{
+ it("separates carts from configuration without losing the recovery tools",async()=>{show("carts");expect(await screen.findByText("Cliente local de teste")).toBeInTheDocument();expect(screen.getByRole("button",{name:"Gerar link seguro"})).toBeInTheDocument();expect(screen.queryByRole("button",{name:"Salvar automação"})).not.toBeInTheDocument();});
+ it("shows automation configuration without duplicating the carts table",async()=>{show("automation");expect(await screen.findByRole("button",{name:"Salvar automação"})).toBeInTheDocument();expect(screen.queryByText("Cliente local de teste")).not.toBeInTheDocument();});
  it("shows real-data metrics and safe link generation without personal data in the URL",async()=>{
   show();expect(await screen.findByText("Cliente local de teste")).toBeInTheDocument();expect(screen.getByText("Valor potencial")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button",{name:"Gerar link seguro"}));
