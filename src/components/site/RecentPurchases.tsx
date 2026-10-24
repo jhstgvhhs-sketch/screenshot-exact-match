@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ShoppingBag, X } from "lucide-react";
 import { useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { usePurchaseNotificationSettings } from "@/lib/purchase-notification-settings";
 
 const SEEN = "3dflex-purchases-seen";
 const DISMISSED = "3dflex-purchases-dismissed";
@@ -13,12 +14,18 @@ const fresh = (time: string) => {
 export function RecentPurchases() {
   const pathname = useRouterState({ select: state => state.location.pathname });
   const allowed = pathname === "/" || pathname === "/produtos" || pathname.startsWith("/produto/");
-  const [purchase, setPurchase] = useState<string | null>(null);
+  const settings = usePurchaseNotificationSettings();
+  const config = settings.data;
+  const messages = config?.messages.filter(message => message.enabled) ?? [];
+  const [purchase, setPurchase] = useState<{ createdAt: string; messageIndex: number } | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     setPurchase(null);
-    if (!allowed || dismissed) return;
+    if (!allowed || dismissed || settings.isError || !config?.enabled || !messages.length) return;
+    const displayDelay = config.display_seconds * 1000;
+    const intervalDelay = config.interval_seconds * 1000;
+    let messageIndex = 0;
     const seen = new Set<string>();
     try {
       if (sessionStorage.getItem(DISMISSED)) return;
@@ -38,23 +45,23 @@ export function RecentPurchases() {
           if (next) {
             seen.add(next.createdAt);
             try { sessionStorage.setItem(SEEN, JSON.stringify([...seen].slice(-50))); } catch { /* Optional. */ }
-            setPurchase(next.createdAt);
-            hide = setTimeout(() => { if (active) setPurchase(null); }, 6500);
+            setPurchase({ createdAt: next.createdAt, messageIndex: messageIndex++ });
+            hide = setTimeout(() => { if (active) setPurchase(null); }, displayDelay);
           }
         } catch { /* No real purchase or unavailable feed: show nothing. */ }
       }
-      if (active) timer = setTimeout(showNext, 60000);
+      if (active) timer = setTimeout(showNext, intervalDelay);
     }
     timer = setTimeout(showNext, 8000);
     return () => { active = false; clearTimeout(timer); clearTimeout(hide); };
-  }, [allowed, dismissed]);
+  }, [allowed, dismissed, config, settings.isError]);
 
-  if (!allowed || dismissed || !purchase || !fresh(purchase)) return null;
-  const minutes = Math.floor((Date.now() - Date.parse(purchase)) / 60000);
+  if (!allowed || dismissed || settings.isError || !config?.enabled || !messages.length || !purchase || !fresh(purchase.createdAt)) return null;
+  const minutes = Math.floor((Date.now() - Date.parse(purchase.createdAt)) / 60000);
   const time = minutes < 1 ? "agora há pouco" : minutes < 60 ? `há ${minutes} min` : `há ${Math.floor(minutes / 60)} h`;
   return <aside role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-4 left-4 z-40 flex w-[calc(100%-2rem)] max-w-sm gap-3 rounded-xl border border-primary/30 bg-card p-4 text-card-foreground shadow-xl motion-safe:animate-in motion-safe:slide-in-from-bottom-2">
     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary"><ShoppingBag className="h-5 w-5" aria-hidden="true"/></span>
-    <div className="min-w-0 flex-1"><p className="text-sm font-bold">Compra confirmada na 3DFLEX</p><p className="mt-1 text-xs text-muted-foreground">Pedido realizado {time} · pagamento confirmado</p></div>
+    <div className="min-w-0 flex-1"><p className="text-sm font-bold">{config.title}</p><p className="mt-1 text-sm">{messages[purchase.messageIndex % messages.length]?.text}</p><p className="mt-1 text-xs text-muted-foreground">Pedido realizado {time} · pagamento confirmado</p></div>
     <button type="button" aria-label="Fechar notificações de compras" className="-mr-1 -mt-1 h-8 w-8 shrink-0 rounded-md p-2 text-muted-foreground hover:bg-muted" onClick={() => { setDismissed(true); setPurchase(null); try { sessionStorage.setItem(DISMISSED, "true"); } catch { /* Optional. */ } }}><X className="h-4 w-4" aria-hidden="true"/></button>
   </aside>;
 }

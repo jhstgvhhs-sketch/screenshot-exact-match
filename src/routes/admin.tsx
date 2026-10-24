@@ -9,6 +9,7 @@ import { brl } from "@/lib/store";
 import { PaymentGatewaySettings } from "@/components/site/PaymentGatewaySettings";
 import { CustomerOrderAdmin } from "@/components/site/CustomerOrderAdmin";
 import { StoreSettingsEditor } from "@/components/site/StoreSettings";
+import { PurchaseNotificationSettings } from "@/components/site/PurchaseNotificationSettings";
 import { AdminSectionBoundary } from "@/components/site/AdminSectionBoundary";
 import { ReviewModeration, AdminAddReview } from "@/components/site/ProductReviews";
 
@@ -120,6 +121,7 @@ function AdminPage() {
       <AdminSectionBoundary title="Pagamentos"><PaymentGatewaySettings /></AdminSectionBoundary>
       <AdminSectionBoundary title="Pedidos"><CustomerOrderAdmin /></AdminSectionBoundary>
       <AdminSectionBoundary title="Configurações"><StoreSettingsEditor /></AdminSectionBoundary>
+      <AdminSectionBoundary title="Notificações de compras"><PurchaseNotificationSettings /></AdminSectionBoundary>
       <AdminSectionBoundary title="Categorias"><CategoryManager categories={categories} onSaved={refreshCatalog} /></AdminSectionBoundary>
       <AdminSectionBoundary title="Adicionar avaliação"><AdminAddReview products={[...products, ...inactiveProducts].map(p => ({ id: p.id, name: p.name }))} /></AdminSectionBoundary>
       <AdminSectionBoundary title="Avaliações"><ReviewModeration /></AdminSectionBoundary>
