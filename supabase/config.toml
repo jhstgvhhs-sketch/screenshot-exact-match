@@ -1,1 +1,5 @@
 project_id = "wexuhtwkwtieaiebhnje"
+
+# Public feed returns only timestamps of paid orders, never customer or order details.
+[functions.recent-purchases]
+verify_jwt = false

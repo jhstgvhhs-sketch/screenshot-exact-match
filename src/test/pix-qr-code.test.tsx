@@ -13,7 +13,7 @@ describe("Pix QR Code", () => {
   });
 
   it("encodes the exact copy-and-paste payload", async () => {
-    const encode = vi.spyOn(QRCode, "toDataURL").mockResolvedValue("data:image/png;base64,test");
+    const encode = vi.spyOn(QRCode, "toDataURL").mockImplementation((() => Promise.resolve("data:image/png;base64,test")) as typeof QRCode.toDataURL);
     render(<PixQrCode copyPaste="exact-pix-payload" />);
     await screen.findByAltText("QR Code Pix");
     expect(encode).toHaveBeenCalledWith("exact-pix-payload", expect.objectContaining({ margin: 4, width: 320 }));
