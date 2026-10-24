@@ -955,6 +955,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      registry_sync_cart: { Args: { p_token: string; p_items: Json; p_contact?: Json; p_consents?: Json; p_source?: string }; Returns: Json }
+      admin_cart_registry: { Args: { p_page?: number; p_status?: string }; Returns: Json }
       kit_conservation_preview: { Args: { _items: Json }; Returns: Json }
       admin_customer_page: {
         Args: { p_page?: number; p_search?: string }

@@ -36,6 +36,7 @@ import { PaymentGatewaySettings } from "@/components/site/PaymentGatewaySettings
 import { StoreSettingsEditor } from "@/components/site/StoreSettings";
 import { PurchaseNotificationSettings } from "@/components/site/PurchaseNotificationSettings";
 import { ReviewModeration, AdminAddReview } from "@/components/site/ProductReviews";
+import { CartRegistry } from "./CartRegistry";
 import { AbandonedCarts } from "@/components/site/AbandonedCarts";
 import { CategoryManager, NewProductForm } from "./CatalogEditors";
 import { Panel, QueryState, action } from "./AdminUi";
@@ -392,7 +393,7 @@ function WorkspacePage({ section }: { section: string }) {
     case "coupons":
       return <CouponsPage />;
     case "carts":
-      return <AbandonedCarts view="carts" />;
+      return <CartRegistry />;
     case "remarketing":
       return <AbandonedCarts view="automation" />;
     case "automations":

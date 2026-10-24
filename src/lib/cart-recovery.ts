@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import type { CartItem } from "./cart";
 
 const KEY="3dflex-recovery-session",CLOSED="3dflex-recovery-completed",SOURCE="3dflex-recovery-source";
@@ -9,6 +10,11 @@ let timer:ReturnType<typeof setTimeout>;
 const fingerprint=(values:CartItem[])=>JSON.stringify(values.map(i=>[i.variantId,i.quantity]).sort());
 function sessionToken(){let token=localStorage.getItem(KEY);if(!token){token=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(v=>v.toString(16).padStart(2,"0")).join("");localStorage.setItem(KEY,token);}return token;}
 export async function recoveryRequest(body:Record<string,unknown>){
+ if(body.action==="sync"){
+  const {data,error}=await supabase.rpc("registry_sync_cart",{p_token:String(body.token??""),p_items:body.items as Json,p_contact:(body.contact??null) as Json,p_consents:(body.consentChanges??null) as Json,p_source:(body.sourceToken??null) as string});
+  if(error){if(error.message?.includes("Cart session unavailable")){localStorage.removeItem(KEY);draft=undefined;}throw new Error("Não foi possível registrar o carrinho. Sua compra pode continuar normalmente.");}
+  return data;
+ }
  const {data,error}=await supabase.functions.invoke("recovery-carts",{body});
  if(error){
   let detail:{error?:string;code?:string}|null=null;
@@ -30,7 +36,7 @@ function enqueue(changes?:Record<string,boolean>){
   void queue.catch(()=>null);return result;
  }catch{return Promise.resolve(null);}
 }
-export function trackRecoveryCart(values:CartItem[]){items=values;clearTimeout(timer);timer=setTimeout(()=>{void enqueue().catch(()=>null);},800);}
+export function trackRecoveryCart(values:CartItem[]){items=values;clearTimeout(timer);if(typeof window!=="undefined"&&/^\/(admin|conta|recuperar|descadastrar)(?:\/|$)/.test(window.location.pathname))return;timer=setTimeout(()=>{void enqueue().catch(()=>null);},800);}
 export function captureRecoveryContact(form:HTMLFormElement){
  const data=new FormData(form);draft={name:String(data.get("name")??""),email:String(data.get("email")??""),phone:String(data.get("phone")??"")};
  clearTimeout(timer);timer=setTimeout(()=>{void enqueue().catch(()=>null);},800);
