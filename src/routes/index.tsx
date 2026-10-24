@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Truck, ShieldCheck, CreditCard, MapPin, ArrowRight } from "lucide-react";
-import { HomeImages } from "@/components/site/HomeImages";
+import { HomeImages, HomeHeroText } from "@/components/site/HomeImages";
 import hero from "@/assets/hero.jpg";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/site/ProductCard";
@@ -42,9 +42,7 @@ function Index() {
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
         <div className="container-x relative py-24 md:py-36">
           <div className="max-w-xl animate-rise">
-            <p className="mb-4 text-xs font-bold tracking-[0.3em] text-primary">IMPRESSÃO 3D</p>
-            <h1 className="text-4xl font-extrabold leading-[1.05] md:text-6xl">SUA PRÓXIMA CRIAÇÃO COMEÇA AQUI.</h1>
-            <p className="mt-5 text-lg text-muted-foreground">Filamentos PLA, PETG e acessórios para transformar suas ideias em realidade.</p>
+            <HomeHeroText />
             <Button asChild variant="buy" size="xl" className="mt-8">
               <Link to="/produtos">Explorar produtos <ArrowRight /></Link>
             </Button>

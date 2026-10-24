@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HomeImages } from "@/components/site/HomeImages";
 import { HomeImagesEditor } from "@/components/site/HomeImagesEditor";
@@ -38,6 +38,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 describe("Homepage image management", () => {
   it("preserves original content until explicitly configured and supports removing it", () => {
@@ -63,6 +64,44 @@ describe("Homepage image management", () => {
     expect(screen.getByRole("img")).toHaveAttribute("src", second.url);
     fireEvent.click(screen.getByLabelText("Imagem anterior"));
     expect(screen.getByRole("img")).toHaveAttribute("src", first.url);
+  });
+  it("keeps the requested text on custom images and advances automatically", () => {
+    vi.useFakeTimers();
+    mocks.images = [first, second];
+    render(<HomeImages>Original</HomeImages>);
+    expect(screen.getByText("IMPRESSÃO 3D")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "SUA PRÓXIMA CRIAÇÃO COMEÇA AQUI.",
+    );
+    expect(
+      screen.getByText(
+        "Filamentos PLA, PETG e acessórios para transformar suas ideias em realidade.",
+      ),
+    ).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(7000));
+    expect(screen.getByRole("img")).toHaveAttribute("src", second.url);
+    act(() => vi.advanceTimersByTime(7000));
+    expect(screen.getByRole("img")).toHaveAttribute("src", first.url);
+    fireEvent.click(screen.getByLabelText("Pausar carrossel"));
+    act(() => vi.advanceTimersByTime(21000));
+    expect(screen.getByRole("img")).toHaveAttribute("src", first.url);
+    fireEvent.click(screen.getByLabelText("Próxima imagem"));
+    expect(screen.getByRole("img")).toHaveAttribute("src", second.url);
+    fireEvent.click(screen.getByLabelText("Reproduzir carrossel"));
+    act(() => vi.advanceTimersByTime(7000));
+    expect(screen.getByRole("img")).toHaveAttribute("src", first.url);
+  });
+  it("pauses while the customer interacts and resumes afterwards", () => {
+    vi.useFakeTimers();
+    mocks.images = [first, second];
+    render(<HomeImages>Original</HomeImages>);
+    const carousel = screen.getByRole("region", { name: "Imagens em destaque" });
+    fireEvent.mouseEnter(carousel);
+    act(() => vi.advanceTimersByTime(14000));
+    expect(screen.getByRole("img")).toHaveAttribute("src", first.url);
+    fireEvent.mouseLeave(carousel);
+    act(() => vi.advanceTimersByTime(7000));
+    expect(screen.getByRole("img")).toHaveAttribute("src", second.url);
   });
   it("removes a selected image and persists only the homepage setting", async () => {
     const saved = vi.fn();

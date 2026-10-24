@@ -88,7 +88,9 @@ export function HomeImagesEditor({
       <h2 className="text-xl font-bold">Imagens da página inicial</h2>
       <p className="text-sm text-muted-foreground">
         Controle a imagem grande no topo da loja. Adicione até {MAX_HOME_IMAGES} imagens; o
-        visitante pode navegar entre elas. Suas artes aparecem inteiras, sem texto sobreposto.
+        carrossel passa automaticamente a cada 7 segundos e permite avançar ou voltar pelas setas. O
+        texto da loja aparece sobre as imagens. Use fotos sem texto e mantenha os elementos
+        importantes no centro.
       </p>
       <fieldset disabled={busy} className="space-y-4">
         {images === null ? (
