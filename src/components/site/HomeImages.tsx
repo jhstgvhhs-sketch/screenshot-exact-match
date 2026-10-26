@@ -63,7 +63,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
         className="col-start-1 row-start-1 block h-auto w-full self-center object-contain md:absolute md:inset-0 md:h-full md:object-cover"
       />
       <div className="container-x pointer-events-none relative col-start-1 row-start-1 flex items-center px-6 pt-2 pb-14 sm:px-12 sm:pt-4 sm:pb-16 md:py-36">
-        <HomeHeroText image={images[index]} />
+        <HomeHeroText image={images[index]} showExplore={index === 0} />
       </div>
       {images.length > 1 && (
         <>
@@ -118,7 +118,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
   );
 }
 
-export function HomeHeroText({ image }: { image?: HomeImage }) {
+export function HomeHeroText({ image, showExplore = true }: { image?: HomeImage; showExplore?: boolean }) {
   const eyebrow = image?.eyebrow ?? DEFAULT_HOME_COPY.eyebrow;
   const title = image?.title ?? DEFAULT_HOME_COPY.title;
   const description = image?.description ?? DEFAULT_HOME_COPY.description;
@@ -143,7 +143,7 @@ export function HomeHeroText({ image }: { image?: HomeImage }) {
           {description}
         </p>
       )}
-      <ExploreProductsButton />
+      {showExplore && <ExploreProductsButton />}
     </div>
   );
 }
