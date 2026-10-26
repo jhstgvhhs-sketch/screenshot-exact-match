@@ -78,13 +78,7 @@ function ProdutoContent() {
       <div className="min-w-0 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-bold uppercase tracking-wider text-primary">{p.brand}</p>{v && <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${v.stock > 0 ? "border-green-600/40 bg-green-600/10 text-green-500" : "border-border text-muted-foreground"}`}>{v.stock > 0 ? "Em estoque" : "Consulte disponibilidade"}</span>}</div>
         <h1 className="text-3xl font-bold leading-tight sm:text-4xl">{p.name}</h1>
-        {p.description && <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{p.description}</p>}
         <PaymentPrice price={p.price} productName={p.name} prominent />
-        {(p.material || p.weight || p.diameter) && <dl className="grid grid-cols-3 gap-2 text-sm">
-          {[["Material", p.material], ["Peso", p.weight], ["Diâmetro", p.diameter]].map(([k, val]) => (
-            <div key={k} className="rounded-lg bg-card p-3"><dt className="text-muted-foreground">{k}</dt><dd className="font-semibold">{val ?? "—"}</dd></div>
-          ))}
-        </dl>}
         {!simpleProduct && <div>
           <p aria-live="polite" className="mb-2 text-sm font-semibold">{p.categories?.slug === "filamentos" ? "Cor" : "Modelo"}: {v?.color ?? "selecione"}</p>
           <div className="flex flex-wrap gap-2">
@@ -119,6 +113,23 @@ function ProdutoContent() {
           {addr && <p className="mt-3 text-sm">{addr.street}, {addr.district} — {addr.city}/{addr.state}<br /><span className="text-muted-foreground">Frete fixo: {brl(FIXED_SHIPPING_BRL)}. Grátis acima de R$ 600,00 no Pix.</span></p>}
         </form>
       </div>
-    </section><ProductReviews productId={p.id} /></>
+    </section>
+    {(p.description || p.material || p.weight || p.diameter) && (
+      <section className="container-x mt-3" aria-labelledby="product-description-heading">
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-8">
+          <h2 id="product-description-heading" className="text-xl font-bold sm:text-2xl">Descrição e especificações</h2>
+          {p.description && <div className="mt-5 whitespace-pre-line break-words text-sm leading-7 text-muted-foreground sm:text-base">{p.description}</div>}
+          {(p.material || p.weight || p.diameter) && <dl className="mt-6 grid gap-3 sm:grid-cols-3">
+            {([["Material", p.material], ["Peso", p.weight], ["Diâmetro", p.diameter]] as const).filter(([, value]) => Boolean(value)).map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-border bg-background p-4">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</dt>
+                <dd className="mt-1 font-semibold">{value}</dd>
+              </div>
+            ))}
+          </dl>}
+        </div>
+      </section>
+    )}
+    <ProductReviews productId={p.id} /></>
   );
 }
