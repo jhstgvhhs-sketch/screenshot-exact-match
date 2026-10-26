@@ -445,11 +445,19 @@ export function NewProductForm({
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (uploading) return;
-    const normalizedPrice = price.trim().replace(/^R\$\s*/, "").replace(/\s/g, "");
-    const parsedPrice = normalizedPrice.includes(",")
+    // Accept both 3.800,00 (BR) and 3,800.00 (international).
+    const normalizedPrice = price.trim().replace(/^R\$\s*/i, "").replace(/\s/g, "");
+    const brThousands = /^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(normalizedPrice);
+    const usThousands = /^\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$/.test(normalizedPrice);
+    const simplePrice = /^\d+(?:[.,]\d{1,2})?$/.test(normalizedPrice);
+    const parsedPrice = brThousands
       ? normalizedPrice.replace(/\./g, "").replace(",", ".")
-      : normalizedPrice;
-    const value = Number(parsedPrice);
+      : usThousands
+        ? normalizedPrice.replace(/,/g, "")
+        : simplePrice
+          ? normalizedPrice.replace(",", ".")
+          : "";
+    const value = parsedPrice ? Number(parsedPrice) : NaN;
     const names = [...new Set(colors.split("\n").map(v => v.trim()).filter(Boolean))];
     const validStock = /^\d+$/.test(stock.trim()) && Number.isSafeInteger(Number(stock));
     const finalSlug = normalizedSlug(slug || name);
