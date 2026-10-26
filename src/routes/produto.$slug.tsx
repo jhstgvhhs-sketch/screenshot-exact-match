@@ -88,11 +88,11 @@ function ProdutoContent() {
           <div className="flex flex-wrap gap-2">
             {p.product_variants.map((x) => (
               <button key={x.id} onClick={() => { setVid(x.id); setGalleryImage(null); setQty(1); void nav({ to: "/produto/$slug", params: { slug }, search: { cor: x.id }, replace: true, resetScroll: false }); }} title={x.color} aria-label={x.color}
-                aria-pressed={selectedVariantId === x.id} className={`group relative flex w-14 flex-col items-center gap-1 rounded-lg p-1 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedVariantId === x.id ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted"}`}>
-                <span aria-hidden="true" className="relative block size-11 shrink-0 rounded-full border-2 border-white/30" style={{ background: x.color_hex ?? undefined }}>
-                  {selectedVariantId === x.id && <Check className="absolute -bottom-1 -right-1 size-5 rounded-full bg-[#FF6A00] p-0.5 text-black" />}
+                aria-pressed={v?.id === x.id} className={p.categories?.slug === "filamentos" ? `group relative flex w-14 flex-col items-center gap-1 rounded-lg p-1 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${v?.id === x.id ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted"}` : `min-h-11 rounded-lg border-2 px-4 py-2 text-sm font-semibold ${v?.id === x.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-card"}`}>
+                {p.categories?.slug === "filamentos" ? <span aria-hidden="true" className="relative block size-11 shrink-0 rounded-full border-2 border-white/30" style={{ background: x.color_hex ?? undefined }}>
+                  {v?.id === x.id && <Check className="absolute -bottom-1 -right-1 size-5 rounded-full bg-[#FF6A00] p-0.5 text-black" />}
                 </span>
-                <span className="line-clamp-2 min-h-7 w-full break-words text-[10px] leading-tight">{x.color}</span>
+                <span className="line-clamp-2 min-h-7 w-full break-words text-[10px] leading-tight">{x.color}</span> : x.color}
               </button>
             ))}
           </div>
