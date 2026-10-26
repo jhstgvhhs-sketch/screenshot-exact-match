@@ -91,6 +91,28 @@ function Index() {
         })}
       </section>
 
+      <section className="container-x mt-16" aria-labelledby="trust-heading">
+        <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-widest text-primary">Compre com informação</p>
+          <h2 id="trust-heading" className="mt-2 text-2xl font-bold md:text-3xl">Conheça a 3DFLEX antes de comprar</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">Confira como funciona o pagamento, quais são as condições de envio e como entrar em contato. Sem promessas de entrega não confirmadas ou selos de segurança sem verificação.</p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {([
+              ["sobre", "Sobre a 3DFLEX", "Quem somos e como atendemos."],
+              ["envio", "Envio e frete", "Valores e orientações para acompanhar o pedido."],
+              ["trocas", "Trocas e devoluções", "Direitos do consumidor e como solicitar atendimento."],
+              ["contato", "Canais de atendimento", "Tire dúvidas antes e depois da compra."],
+            ] as const).map(([slug, title, description]) => (
+              <Link key={slug} to="/info/$slug" params={{ slug }} className="group rounded-xl border border-border bg-background p-4 transition-colors hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-primary">
+                <h3 className="font-semibold text-foreground">{title} <ArrowRight aria-hidden="true" className="ml-1 inline size-4 text-primary transition-transform group-hover:translate-x-1" /></h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{description}</p>
+              </Link>
+            ))}
+          </div>
+          <p className="mt-5 text-xs text-muted-foreground">Antes de pagar, confira os dados de contato e a identificação comercial disponíveis no <Link to="/info/$slug" params={{ slug: "contato" }} className="text-primary underline">atendimento</Link>.</p>
+        </div>
+      </section>
+
       <SiteReviews />
 
       <section className="container-x mt-16">
