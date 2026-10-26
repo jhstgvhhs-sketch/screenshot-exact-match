@@ -9,6 +9,7 @@ const cats = [
   { label: "PETG", slug: "petg" },
   { label: "Impressoras", slug: "impressoras" },
   { label: "Acessórios", slug: "acessorios" },
+  { label: "Peças", slug: "pecas" },
 ];
 
 export function Header() {
@@ -29,21 +30,21 @@ export function Header() {
       <div className="bg-gradient-primary py-1.5 text-center text-[11px] font-bold tracking-[0.2em] text-primary-foreground">
         FRETE GRÁTIS ACIMA DE R$ 600,00 NO PIX
       </div>
-      <div className="container-x flex h-16 items-center gap-4">
+      <div className="container-x flex h-16 items-center gap-3 lg:h-20 lg:gap-5">
         <button className="md:hidden" aria-label="Abrir menu" onClick={() => setOpen(!open)}>
           {open ? <X /> : <Menu />}
         </button>
         <Link to="/" className="font-display text-2xl font-extrabold tracking-tight">
           3D<span className="text-primary">FLEX</span>
         </Link>
-        <nav className="ml-4 hidden items-center gap-5 text-sm font-semibold md:flex">
+        <nav className="ml-4 hidden items-center gap-5 text-sm font-semibold xl:flex">
           {cats.map((c) => (
             <Link key={c.slug} to="/produtos" search={{ categoria: c.slug }} className="text-muted-foreground transition-colors hover:text-primary">
               {c.label}
             </Link>
           ))}
         </nav>
-        <form onSubmit={submit} className="ml-auto hidden max-w-sm flex-1 md:block">
+        <form onSubmit={submit} className="ml-auto hidden max-w-lg flex-1 md:block">
           <label className="relative block">
             <span className="sr-only">Pesquisar produtos</span>
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
