@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
+import { Trash2, CreditCard, Wallet, ArrowRight } from "lucide-react";
 import { quantityLimit } from "@/lib/cart-stock";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
@@ -25,26 +25,26 @@ function Carrinho() {
     <section className="container-x py-10">
       <h1 className="text-3xl font-bold">Carrinho</h1>
       {items.length === 0 ? <p className="mt-6 text-muted-foreground">Seu carrinho está vazio.</p> : (
-        <div className="mt-6 grid gap-6 md:grid-cols-[1fr_320px]">
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <ul className="space-y-3">
             {items.map((i) => (
-              <li key={i.variantId} className="flex items-center gap-4 rounded-xl border border-border bg-card p-3">
+              <li key={i.variantId} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:flex-nowrap">
                 <img src={i.image} alt="" width={64} height={64} className="size-16 rounded-lg object-cover" />
-                <div className="flex-1"><p className="font-semibold">{i.name}</p><p className="text-sm text-muted-foreground">{i.color} · {brl(i.price)}</p></div>
+                <div className="flex-1"><p className="font-semibold">{i.name}</p><p className="text-sm text-muted-foreground">{i.color !== "Padrão" ? `${i.color} · ` : ""}{brl(i.price)} no Pix</p></div>
                 <input type="number" min={1} max={quantityLimit(i)} value={i.quantity} aria-label="Quantidade" onChange={(e) => setQty(i.variantId, Number(e.target.value))} className="h-9 w-16 rounded-lg border border-input bg-background px-2" />
                 <button aria-label="Remover" onClick={() => remove(i.variantId)}><Trash2 className="size-4 text-muted-foreground" /></button>
               </li>
             ))}
           </ul>
-          <aside className="h-fit space-y-2 rounded-xl border border-border bg-card p-5 text-sm">
+          <aside className="h-fit space-y-3 rounded-2xl border border-border bg-card p-5 text-sm lg:sticky lg:top-28">
             {!eligibleForFreePixShipping && <p role="status" className="rounded-lg border border-primary/40 bg-primary/10 p-3 font-semibold text-foreground">Faltam apenas {brl(remainingForFreeShipping)} para ganhar frete grátis no Pix!</p>}
             {eligibleForFreePixShipping && <p role="status" className="rounded-lg border border-green-600/40 bg-green-600/10 p-3 font-semibold text-green-600">Parabéns! Você ganhou frete grátis no Pix!</p>}
             <div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div>
             <div className="flex justify-between"><span>Frete no Pix</span><span>{eligibleForFreePixShipping ? <span className="font-bold text-green-600">GRÁTIS</span> : brl(FIXED_SHIPPING_BRL)}</span></div>
             {eligibleForFreePixShipping && <div className="flex justify-between text-green-600"><span>Desconto no frete (Pix)</span><span>-{brl(FIXED_SHIPPING_BRL)}</span></div>}
-            <div className="flex justify-between border-t border-border pt-2 text-lg font-bold"><span>Total no Pix</span><span>{brl(subtotal + (eligibleForFreePixShipping ? 0 : FIXED_SHIPPING_BRL))}</span></div>
-            {eligibleForFreePixShipping && <p className="text-xs text-muted-foreground">No cartão, o total será {brl(subtotal + FIXED_SHIPPING_BRL)} (frete de {brl(FIXED_SHIPPING_BRL)}).</p>}
-            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix. O valor final depende da forma de pagamento escolhida no checkout.</p>
+            <div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span className="flex items-center gap-2"><Wallet className="size-5 text-primary" /> Total no Pix</span><span className="text-primary">{brl(subtotal + (eligibleForFreePixShipping ? 0 : FIXED_SHIPPING_BRL))}</span></div>
+            <p className="flex items-start gap-2 rounded-lg border border-border bg-background p-3 text-xs leading-relaxed text-muted-foreground"><CreditCard className="mt-0.5 size-4 shrink-0 text-primary" /> Cartão de crédito: parcelamento com juros da maquineta. Simule o valor final pelo WhatsApp. O frete grátis é exclusivo do Pix.</p>
+            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout <ArrowRight className="ml-2 inline size-4" /></Link><p className="pt-2 text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix. O valor final depende da forma de pagamento escolhida no checkout.</p>
           </aside>
         </div>
       )}
