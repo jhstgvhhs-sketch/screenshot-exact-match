@@ -2,7 +2,7 @@ import type { CartItem } from './cart';
 
 export function quantityLimit(item: CartItem): number {
   const stock = Math.max(0, Math.floor(item.stock ?? 99));
-  return /filamento/i.test(item.name) ? 10 : Math.min(99, stock);
+  return /filamento/i.test(item.name) ? 10 : Math.min(10, stock);
 }
 
 export function clampQuantity(item: CartItem, quantity: number): number {
