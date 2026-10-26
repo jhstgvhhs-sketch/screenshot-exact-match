@@ -1,4 +1,5 @@
 import { useStoreSettings } from "@/components/site/StoreSettings";
+import { brazilPhone } from "@/lib/tracking";
 import { Link } from "@tanstack/react-router";
 import { CreditCard, LockKeyhole, Mail, MessageCircle, ShieldCheck, Truck, Wallet } from "lucide-react";
 
@@ -9,7 +10,7 @@ const links = [
 
 export function Footer() {
   const { data: store } = useStoreSettings();
-  const wa = store?.whatsapp.replace(/\D/g, "");
+  const wa = brazilPhone(store?.whatsapp ?? "");
   return (
     <footer className="mt-24 border-t border-border bg-card/40">
       <div className="container-x grid gap-10 py-12 md:grid-cols-3">
