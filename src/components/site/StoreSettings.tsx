@@ -80,6 +80,7 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
  }
  return <form onSubmit={save} className="mt-10 space-y-5 rounded-xl border border-border bg-card p-5">
    <h2 className="text-xl font-bold">Dados da loja</h2>
+   {(!fields.legal_name.trim() || !fields.cnpj.trim() || !fields.address.trim() || (!fields.email.trim() && !fields.whatsapp.trim())) && <div role="status" className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm"><p className="font-bold text-foreground">Complete a identificação comercial para transmitir confiança.</p><p className="mt-1 text-muted-foreground">Informe dados reais: razão social, CNPJ, endereço comercial e pelo menos um canal de atendimento. Essas informações aparecem no rodapé e nas páginas de políticas. Não use dados de terceiros.</p></div>}
    <p className="text-sm text-muted-foreground">Atualize as informações que aparecem no rodapé. Campos vazios não serão publicados. Não use dados de outra empresa.</p>
    <p className="text-sm text-muted-foreground">O campo WhatsApp do checkout define para qual número o cliente será direcionado ao escolher cartão de crédito. O mesmo número aparece no rodapé. Informe DDD e número; o código 55 é opcional. A alteração passa a valer após salvar, sem nova publicação. Se estiver vazio, será usada a configuração anterior do ambiente, caso exista.</p>
    <div className="grid gap-4 md:grid-cols-2">
