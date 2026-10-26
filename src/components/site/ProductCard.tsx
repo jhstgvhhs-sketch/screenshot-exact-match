@@ -23,7 +23,7 @@ export function ProductCard({ p, variant }: { p: Product; variant?: Variant }) {
         </div>}
         <div className="flex items-end justify-between pt-1">
           <span className="font-display text-xl font-bold">{brl(p.price)}</span>
-          <span className={stock > 0 ? "text-xs text-success" : "text-xs text-muted-foreground"}>{stock > 0 ? "Em estoque" : "Sob encomenda"}</span>
+          <span className={stock > 0 ? "text-xs text-success" : "text-xs text-muted-foreground"}>{stock > 0 ? "Em estoque" : /filamento/i.test(p.name) ? "Sob encomenda" : "Indisponível"}</span>
         </div>
       </div>
     </Link>
