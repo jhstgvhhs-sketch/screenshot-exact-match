@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useStoreSettings } from "./StoreSettings";
 import { brazilPhone } from "@/lib/tracking";
 import { brl } from "@/lib/store";
 import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className="space-y-2"><h2 className="text-lg font-bold text-foreground">{title}</h2>{children}</section>;
 }
 
