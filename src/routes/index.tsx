@@ -1,3 +1,4 @@
+import { publicPageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Truck, ShieldCheck, CreditCard, MapPin, ArrowRight } from "lucide-react";
@@ -10,14 +11,7 @@ import { productsQuery, categoriesQuery } from "@/lib/catalog";
 import { brl, SHIPPING_FLAT } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "3DFLEX — Sua próxima criação começa aqui" },
-      { name: "description", content: "Filamentos PLA, PETG e acessórios para transformar suas ideias em realidade. Envio para todo o Brasil." },
-      { property: "og:title", content: "3DFLEX — Sua próxima criação começa aqui" },
-      { property: "og:description", content: "Filamentos PLA, PETG e acessórios para impressão 3D." },
-    ],
-  }),
+  head: () => publicPageHead("/", "3DFLEX | Filamentos PLA e PETG para Impressão 3D", "Filamentos PLA, PETG e acessórios para transformar suas ideias em realidade. Confira as cores e compre na 3DFLEX. Envio para todo o Brasil.", hero),
   component: Index,
 });
 
@@ -86,7 +80,7 @@ function Index() {
         {[
           [Truck, "Envio para todo o Brasil", `Frete fixo de ${brl(SHIPPING_FLAT)} · grátis acima de R$ 600 no Pix`],
           [MapPin, "Endereço pelo CEP", "Digite o CEP e preenchemos o endereço"],
-          [CreditCard, "Formas de pagamento", "Pix em breve · cartão via WhatsApp"],
+          [CreditCard, "Formas de pagamento", "Pix no checkout · cartão de crédito via WhatsApp"],
           [ShieldCheck, "Dados protegidos", "Não armazenamos dados de cartão"],
         ].map(([Icon, t, d]) => {
           const I = Icon as typeof Truck;

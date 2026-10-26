@@ -47,6 +47,11 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      if (new URL(request.url).pathname === "/sitemap.xml" && ["GET", "HEAD"].includes(request.method)) {
+        const { sitemapResponse } = await import("./lib/sitemap");
+        const response = await sitemapResponse();
+        return request.method === "HEAD" ? new Response(null, { status: response.status, headers: response.headers }) : response;
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

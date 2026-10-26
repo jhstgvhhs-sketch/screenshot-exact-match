@@ -1,3 +1,4 @@
+import { paymentLabel } from "@/lib/payment-status";
 import { OrderGifts } from "@/components/OrderGifts";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -18,14 +19,6 @@ const orderStatus: Record<string, string> = {
   entregue: "Entregue",
   cancelled: "Cancelado",
   cancelado: "Cancelado",
-};
-const payments: Record<string, string> = {
-  pending: "Pendente",
-  pendente: "Pendente",
-  paid: "Pago",
-  pago: "Pago",
-  cancelado: "Cancelado",
-  expirado: "Expirado",
 };
 export function CustomerOrders({ userId }: { userId: string }) {
   const [page, setPage] = useState(0);
@@ -103,8 +96,7 @@ export function CustomerOrders({ userId }: { userId: string }) {
                 Total: <strong>{brl(Number(o.total))}</strong>
               </p>
               <p className="mt-1 text-sm">
-                Status: {orderStatus[o.status] ?? o.status} · Pagamento:{" "}
-                {payments[o.payment_status] ?? o.payment_status}
+                Status: {orderStatus[o.status] ?? o.status} · {paymentLabel(o.payment_status)}
               </p>
               <OrderGifts value={o.gift_items} />
               {["cancelled", "cancelado"].includes(o.status) ? (

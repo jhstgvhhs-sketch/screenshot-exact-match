@@ -1,3 +1,4 @@
+import { CheckoutAuth } from "@/components/CheckoutAuth";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { reviewCheckoutItems } from "@/lib/checkout-review";
@@ -16,7 +17,7 @@ import { CheckoutAddress } from "@/components/CheckoutAddress";
 import { PixPaymentStatus } from "@/components/PixPaymentStatus";
 
 export const Route = createFileRoute("/checkout")({
-  head: () => ({ meta: [{ title: "Finalizar compra — 3DFLEX" }, { name: "description", content: "Confira seu pedido e informe os dados de entrega." }] }),
+  head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" },{ title: "Finalizar compra — 3DFLEX" }, { name: "description", content: "Confira seu pedido e informe os dados de entrega." }] }),
   component: Checkout,
 });
 
@@ -52,7 +53,7 @@ export function Checkout() {
       const { data, error } = await supabase.functions.invoke("blackcat-create-pix", {
         body: { customer, items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })) }
       });
-      if (error) throw new Error(error.message || "Pix indisponível no momento.");
+      if (error) throw new Error("Não foi possível gerar o Pix agora. Consulte Meus Pedidos antes de tentar novamente.");
       if (!data || typeof data.copyPaste !== "string" || typeof data.orderId !== "string")
         throw new Error(data?.error || "Não foi possível gerar o Pix. Nenhuma cobrança foi confirmada.");
       setPixData({ copyPaste: data.copyPaste, qrCodeBase64: data.qrCodeBase64, orderId: data.orderId });
@@ -73,6 +74,8 @@ export function Checkout() {
       const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
       if (customer.email?.toLowerCase() !== user.email?.toLowerCase())
         throw new Error("Utilize no pedido o mesmo e-mail da sua conta.");
+      const cardLink = cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts);
+      if (!cardLink) throw new Error("O atendimento para cartão está indisponível. Consulte os canais de contato da loja ou escolha Pix.");
       const { data, error } = await supabase.rpc("place_order", {
         _items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })),
         _customer: customer,
@@ -82,7 +85,7 @@ export function Checkout() {
       if (error) throw error;
       if (!data) throw new Error("O pedido não foi confirmado pelo banco.");
       setCardOrderId(data);
-      setWhatsappUrl(cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts));
+      setWhatsappUrl(cardLink);
       setValidated(true);
     } catch (error) {
       setCardError(error instanceof Error ? error.message : "Não foi possível registrar o pedido.");
@@ -122,11 +125,12 @@ export function Checkout() {
         <RecoveryConsent />
         <button type="submit" className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground hover:opacity-90">Continuar para pagamento</button>
       </form><div hidden={step !== "payment"} className="space-y-6">
+        <CheckoutAuth />
         <fieldset className="space-y-3 rounded-xl border border-border bg-card p-5">
           <legend className="px-2 font-bold">Escolha como pagar</legend>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
             <input type="radio" name="payment" disabled={!!pixData || !!cardOrderId} checked={payment === "pix"} onChange={() => { setPayment("pix"); setCardShippingConfirmed(false); setValidated(false); }} className="mt-1 accent-primary" />
-            <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">Pagamento instantâneo. Disponível após a validação segura do gateway.</span></span>
+            <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">Gere o código Pix e confira a confirmação do pagamento nesta página.</span></span>
           </label>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
             <input type="radio" name="payment" disabled={!!pixData || !!cardOrderId} checked={payment === "card"} onChange={() => { setPayment("card"); setCardShippingConfirmed(false); setValidated(false); }} className="mt-1 accent-primary" />
@@ -148,7 +152,7 @@ export function Checkout() {
         {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
         {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
         {pixData && payment === "pix" && <div className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="font-bold">Pagamento Pix — pedido {pixData.orderId}</h2><PixPaymentStatus orderId={pixData.orderId}><PixQrCode copyPaste={pixData.copyPaste} /><label className="block text-sm">Pix copia e cola<textarea className="mt-2 w-full rounded-lg border bg-background p-3" readOnly rows={3} value={pixData.copyPaste}/></label><button type="button" className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={() => void navigator.clipboard.writeText(pixData.copyPaste)}>Copiar código Pix</button><p className="text-sm text-muted-foreground">Aguarde a confirmação do pagamento. Não faça um novo pedido enquanto este estiver pendente.</p></PixPaymentStatus></div>}
-        {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">{payment === "pix" ? "O Pix ainda não está disponível para cobrança online. Nenhum pedido foi criado ou cobrado." : whatsappUrl ? `Pedido ${cardOrderId?.slice(0,8).toUpperCase()} registrado como pagamento pendente. Continue no WhatsApp. A loja só marcará como pago após confirmação manual.` : "Atendimento por WhatsApp ainda não configurado. Nenhum pedido foi criado ou cobrado."}</p>}
+        {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">{whatsappUrl ? `Pedido ${cardOrderId?.slice(0,8).toUpperCase()} registrado como pagamento pendente. Continue no WhatsApp. A loja só marcará como pago após confirmação manual.` : "Pedido registrado como pagamento pendente. O atendimento por WhatsApp está indisponível; consulte os canais de contato da loja antes de tentar novamente."}</p>}
         {validated && whatsappUrl && payment === "card" && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
         <button type="button" disabled={!!pixData || !!cardOrderId} onClick={() => { setStep("details"); setValidated(false); setWhatsappUrl(null); }} className="text-sm font-semibold text-primary underline">Voltar aos dados de entrega</button>
       </div>

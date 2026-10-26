@@ -29,7 +29,7 @@ export const productQuery = (slug: string) =>
   queryOptions({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select(SELECT).eq("slug", slug).maybeSingle();
+      const { data, error } = await supabase.from("products").select(SELECT).eq("slug", slug).eq("active", true).maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const p = data as unknown as Product;

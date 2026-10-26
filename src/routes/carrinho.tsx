@@ -7,7 +7,7 @@ import { FIXED_SHIPPING_BRL, FREE_PIX_SHIPPING_THRESHOLD_BRL } from "@/lib/shipp
 
 export const Route = createFileRoute("/carrinho")({
   head: () => ({
-    meta: [
+    meta: [{ name: "robots", content: "noindex, nofollow" },
       { title: "Carrinho — 3DFLEX" },
       { name: "description", content: "Seu carrinho de compras 3DFLEX." },
       { property: "og:title", content: "Carrinho — 3DFLEX" },

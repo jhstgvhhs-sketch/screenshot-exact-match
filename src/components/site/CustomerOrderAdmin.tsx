@@ -1,10 +1,10 @@
+import { paymentLabel, paymentState } from "@/lib/payment-status";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { brl } from "@/lib/store";
 
 const orderStatusPt: Record<string,string> = {pending:"Pendente",aguardando_pagamento:"Aguardando pagamento",processing:"Em preparação",processando:"Em preparação",shipped:"Enviado",enviado:"Enviado",delivered:"Entregue",entregue:"Entregue",cancelled:"Cancelado",cancelado:"Cancelado"};
-const paymentStatusPt: Record<string,string> = {pending:"Pendente",pendente:"Pendente",paid:"Pago",pago:"Pago",cancelado:"Cancelado",expired:"Expirado",expirado:"Expirado",failed:"Falhou"};
 const paymentMethodPt: Record<string,string> = {cartao:"Cartão de crédito",card:"Cartão de crédito",pix:"Pix"};
 const translate = (value:string|null, dict:Record<string,string>) => value ? (dict[value] ?? value) : "Não informado";
 export function CustomerOrderAdmin() {
@@ -22,8 +22,8 @@ export function CustomerOrderAdmin() {
   if(error)throw error;return data??[];
  }});
  const visibleCustomers=(customers.data??[]).filter(c=>([c.full_name,c.phone].join(" ").toLowerCase().includes(search.toLowerCase())));
- const visibleOrders=(orders.data??[]).filter(o=>filter==="all"||(filter==="paid"?["paid","pago"].includes(o.payment_status):filter==="pending"?!["paid","pago"].includes(o.payment_status):o.status===filter));
- const paid=(orders.data??[]).filter(o=>o.payment_status==="paid");
+ const visibleOrders=(orders.data??[]).filter(o=>filter==="all"||(filter==="paid"?paymentState(o.payment_status)==="paid":filter==="pending"?paymentState(o.payment_status)==="pending":o.status===filter));
+ const paid=(orders.data??[]).filter(o=>paymentState(o.payment_status)==="paid"&&!["cancelled","cancelado"].includes(o.status));
  async function archiveOrder(id:string) {
   if(!window.confirm("Remover este pedido da lista? Ele será arquivado, sem apagar registros financeiros ou devolver estoque automaticamente."))return;
   setBusy(id);setMessage("");
@@ -74,7 +74,7 @@ function OrderAdminCard({order,onUpdate,onArchive,busy}:{order:AdminOrder;onUpda
  const [tracking,setTracking]=useState(order.tracking_code??"");
  return <article className="rounded-lg border border-border p-4">
   <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">Pedido {order.id.slice(0,8).toUpperCase()}</p><p className="mt-1 text-sm">{order.customer_name} · {order.customer_email}</p><p className="mt-1 text-sm text-muted-foreground">{order.customer_phone} · {order.ship_city}/{order.ship_state} · {new Date(order.created_at).toLocaleDateString("pt-BR")}</p></div><p className="text-lg font-bold">{brl(Number(order.total))}</p></div>
-  <p className="mt-3 text-sm">Pagamento: <strong>{translate(order.payment_status,paymentStatusPt)}</strong> · Método: {translate(order.payment_method,paymentMethodPt)}</p>
+  <p className="mt-3 text-sm">Pagamento: <strong>{paymentLabel(order.payment_status)}</strong> · Método: {translate(order.payment_method,paymentMethodPt)}</p>
   <div className="mt-4 grid gap-3 md:grid-cols-2">
    <label className="text-sm">Status do pedido<select value={status} onChange={e=>setStatus(e.target.value)} className="mt-1 w-full rounded-lg border border-input bg-background p-2"><option value={order.status}>{translate(order.status,orderStatusPt)}</option>{["pending","processing","shipped","delivered","cancelled"].filter(s=>s!==order.status).map(s=><option key={s} value={s}>{translate(s,orderStatusPt)}</option>)}</select></label>
    <label className="text-sm">Código de rastreio<input value={tracking} onChange={e=>setTracking(e.target.value)} maxLength={120} className="mt-1 w-full rounded-lg border border-input bg-background p-2"/></label>
@@ -82,7 +82,7 @@ function OrderAdminCard({order,onUpdate,onArchive,busy}:{order:AdminOrder;onUpda
   <div className="mt-4 flex flex-wrap gap-3">
    <button type="button" disabled={busy||(status===order.status&&tracking===(order.tracking_code??""))} onClick={()=>onUpdate({status,tracking_code:tracking.trim()||null})} className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground disabled:opacity-50">Salvar andamento</button>
    <button type="button" disabled={busy} onClick={onArchive} className="rounded-lg border border-destructive px-4 py-2 font-semibold text-destructive disabled:opacity-50">Apagar da lista</button>
-   {order.payment_status!=="paid"&&<button type="button" disabled={busy} onClick={()=>onUpdate({payment_status:"paid"})} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary disabled:opacity-50">Confirmar pagamento recebido</button>}
+   {paymentState(order.payment_status)!=="paid"&&<button type="button" disabled={busy} onClick={()=>onUpdate({payment_status:"paid"})} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary disabled:opacity-50">Confirmar pagamento recebido</button>}
   </div>
  </article>;
 }

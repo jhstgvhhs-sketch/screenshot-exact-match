@@ -8,7 +8,7 @@ import { brl } from "@/lib/store";
 
 export const Route = createFileRoute("/conta")({
   validateSearch: (s: Record<string, unknown>): { aba?: string } => ({ aba: typeof s.aba === "string" ? s.aba : undefined }),
-  head: () => ({ meta: [{ title: "Minha conta — 3DFLEX" }, { name: "description", content: "Cadastro, dados pessoais, endereços e pedidos 3DFLEX." }] }),
+  head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" },{ title: "Minha conta — 3DFLEX" }, { name: "description", content: "Cadastro, dados pessoais, endereços e pedidos 3DFLEX." }] }),
   component: CustomerAccount,
 });
 const input = "mt-1 w-full rounded-lg border border-input bg-background px-3 py-2";

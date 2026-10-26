@@ -1,3 +1,4 @@
+import { paymentLabel, paymentState } from "@/lib/payment-status";
 import { OrderGifts } from "@/components/OrderGifts";
 import { RemoveOrderButton } from "./RemoveOrderButton";
 import { useState, useEffect } from "react";
@@ -179,7 +180,7 @@ export function OrdersPage({
                     <td className="whitespace-nowrap p-2 font-semibold">{brl(o.total)}</td>
                     <td className="p-2">{paymentMethod(o.payment_method)}</td>
                     <td className="p-2">
-                      <Status>{label(o.payment_status)}</Status>
+                      <Status>{paymentLabel(o.payment_status)}</Status>
                     </td>
                     <td className="p-2">
                       <Status>{label(o.status)}</Status>
@@ -358,7 +359,7 @@ function OrderDetails({ id }: { id: string }) {
           <OrderGifts value={o.gift_items} />
           <p className="text-xl font-bold">Total: {brl(o.total)}</p>
           <p>
-            {paymentMethod(o.payment_method)} · <Status>{label(o.payment_status)}</Status>
+            {paymentMethod(o.payment_method)} · <Status>{paymentLabel(o.payment_status)}</Status>
           </p>
           <p className="text-xs text-muted-foreground">
             Criado em {adminDate(o.created_at)}. Histórico detalhado de alterações não registrado
@@ -409,7 +410,7 @@ function OrderDetails({ id }: { id: string }) {
             >
               Salvar andamento
             </button>
-            {!["paid", "pago"].includes(o.payment_status) && (
+            {paymentState(o.payment_status) !== "paid" && (
               <button className={action} disabled={busy} onClick={() => void mutate("paid")}>
                 Confirmar pagamento recebido
               </button>

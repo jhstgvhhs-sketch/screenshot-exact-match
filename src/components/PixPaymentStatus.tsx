@@ -1,3 +1,4 @@
+import { pixDisplayState } from "@/lib/payment-status";
 import { useEffect, useState } from "react";
 import { CheckCircle2, Clock3, CircleAlert } from "lucide-react";
 import { markRecoveryCompleted } from "@/lib/cart-recovery";
@@ -18,8 +19,7 @@ export function PixPaymentStatus({ orderId, children }: { orderId: string; child
         // Read only: only the verified server webhook may confirm a Pix payment.
         const { data, error } = await supabase.from("orders").select("payment_status,status").eq("id", orderId).maybeSingle();
         if (!error && data) {
-          next = ["cancelado", "expirado", "estornado"].includes(data.payment_status) || data.status === "cancelado" ? "closed"
-            : data.payment_status === "pago" ? "paid" : "pending";
+          next = pixDisplayState(data.payment_status, data.status);
         }
       } catch { /* Keep payment unconfirmed on network errors. */ }
       if (!active) return;
