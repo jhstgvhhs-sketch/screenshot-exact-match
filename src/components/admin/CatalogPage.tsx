@@ -121,7 +121,7 @@ export function CatalogPage({
         retry={() => void query.refetch()}
       />
       {query.data && !query.isError && (
-        <Panel title={stockOnly ? "Estoque por cor" : "Catálogo de produtos"}>
+        <Panel title={stockOnly ? "Estoque por variante" : "Catálogo de produtos"}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px] text-left text-sm">
               <thead className="text-xs text-muted-foreground">
@@ -131,7 +131,7 @@ export function CatalogPage({
                     "Categoria",
                     "Material",
                     "Preço",
-                    "Variantes",
+                    "Opções",
                     "Estoque",
                     "Status",
                     "Ações",
@@ -296,7 +296,7 @@ function VariantAdd({ product, onSaved }: { product: AdminProduct; onSaved: () =
     if (
       product.product_variants.some((v) => v.color.toLowerCase() === color.trim().toLowerCase())
     ) {
-      setFeedback("Essa cor já existe neste produto.");
+      setFeedback("Essa opção já existe neste produto.");
       return;
     }
     if (!window.confirm(`Adicionar a cor ${color.trim()} com ${stock} unidade(s)?`)) return;
@@ -316,7 +316,7 @@ function VariantAdd({ product, onSaved }: { product: AdminProduct; onSaved: () =
         .select("id")
         .single();
       if (error) throw error;
-      setFeedback("Cor adicionada. Edite o produto para informar a imagem.");
+      setFeedback("Opção adicionada. Edite o produto para informar a imagem.");
       setColor("");
       setSku("");
       onSaved();
@@ -328,10 +328,10 @@ function VariantAdd({ product, onSaved }: { product: AdminProduct; onSaved: () =
   }
   return (
     <details className="rounded-xl border border-border p-5">
-      <summary className="cursor-pointer font-semibold">Adicionar uma cor a {product.name}</summary>
+      <summary className="cursor-pointer font-semibold">Adicionar {product.categories?.slug === "filamentos" ? "uma cor" : "uma opção / modelo"} a {product.name}</summary>
       <form onSubmit={add} className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm">
-          Nome da cor
+          Nome da opção / cor
           <input
             required
             maxLength={100}
@@ -372,7 +372,7 @@ function VariantAdd({ product, onSaved }: { product: AdminProduct; onSaved: () =
           />
         </label>
         <button disabled={busy} className={action} type="submit">
-          Salvar nova cor
+          Salvar nova opção
         </button>
       </form>
       {feedback && (
