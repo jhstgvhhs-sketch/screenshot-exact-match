@@ -8,14 +8,16 @@ export function PaymentPrice({
   price,
   productName,
   prominent = false,
+  isPrinter = false,
 }: {
   price: number;
   productName?: string;
   prominent?: boolean;
+  isPrinter?: boolean;
 }) {
   const { data: settings } = useStoreSettings();
   const whatsapp = brazilPhone(settings?.whatsapp ?? "");
-  const message = `Olá! Tenho interesse ${productName ? `no produto ${productName}, anunciado por ${brl(price)} no Pix` : "nos produtos da 3DFLEX"}. Gostaria de simular o parcelamento no cartão de crédito com os juros da maquineta.`;
+  const message = `Olá! Tenho interesse ${productName ? `no produto ${productName}, anunciado por ${brl(price)} no Pix` : "nos produtos da 3DFLEX"}. ${isPrinter ? "Gostaria de consultar o parcelamento em até 10x sem juros no cartão de crédito." : "Gostaria de simular o parcelamento no cartão de crédito com os juros da maquineta."}`;
   if (!prominent)
     return (
       <div>
@@ -24,7 +26,7 @@ export function PaymentPrice({
           <span className="font-sans text-xs font-semibold text-foreground">no Pix</span>
         </p>
         <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-          Cartão com juros da maquineta.
+          {isPrinter ? "Impressoras: até 10x sem juros no cartão." : "Cartão com juros da maquineta."}
         </p>
       </div>
     );
@@ -46,7 +48,7 @@ export function PaymentPrice({
             Cartão de crédito
           </p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Parcelamento com juros da maquineta.
+            {isPrinter ? "Impressoras em até 10x sem juros." : "Parcelamento com juros da maquineta."}
           </p>
           {whatsapp ? (
             <a
@@ -74,8 +76,7 @@ export function PaymentPrice({
           <strong className="text-foreground">
             O preço exibido é o valor para pagamento via Pix.
           </strong>{" "}
-          No cartão de crédito, o parcelamento está sujeito aos juros da maquineta. Consulte as
-          condições e o valor final pelo WhatsApp.
+          {isPrinter ? "Para impressoras 3D, parcelamos em até 10x sem juros no cartão de crédito. Consulte as condições pelo WhatsApp." : "No cartão de crédito, o parcelamento está sujeito aos juros da maquineta. Consulte as condições e o valor final pelo WhatsApp."}
         </p>
       </div>
     </div>
