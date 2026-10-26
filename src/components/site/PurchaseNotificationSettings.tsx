@@ -18,6 +18,7 @@ function NotificationForm({ current, onSaved }: { current: Settings; onSaved: ()
   const [fields, setFields] = useState(current);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [simulationText, setSimulationText] = useState("Um cliente realizou uma compra!");
   const input = "mt-2 w-full rounded-lg border border-input bg-background p-3";
   async function save(event: FormEvent) {
     event.preventDefault(); setBusy(true); setFeedback("");
@@ -47,6 +48,17 @@ function NotificationForm({ current, onSaved }: { current: Settings; onSaved: ()
         <button type="button" disabled={fields.messages.length >= 6} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40" onClick={() => setFields({ ...fields, messages: [...fields.messages, { text: "", enabled: true }] })}>Adicionar mensagem</button>
       </div>
       <div className="rounded-lg border border-primary/30 bg-background p-4"><p className="mb-3 text-xs text-muted-foreground">Prévia da mensagem promocional</p><div className="flex gap-3"><ShoppingBag aria-hidden="true" className="h-6 w-6 shrink-0 text-primary"/><div><p className="text-sm font-bold">{fields.title}</p><p className="mt-1 text-sm">{fields.messages.find(message => message.enabled)?.text || "Nenhuma mensagem ativa"}</p><p className="mt-1 text-xs text-muted-foreground">Mensagem do sistema</p></div></div></div>
+      <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-background p-4">
+        <h3 className="font-semibold">Teste interno de notificação simulada</h3>
+        <p className="text-xs text-muted-foreground">Esta simulação aparece somente nesta prévia do painel administrativo; não é publicada na vitrine nem salva como compra real.</p>
+        <label className="block text-sm font-semibold">Texto para testar
+          <textarea rows={2} className={input} maxLength={180} value={simulationText} onChange={event => setSimulationText(event.target.value)} />
+        </label>
+        <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-3" aria-label="Prévia interna de simulação">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary" aria-label="Simulação">S</span>
+          <div className="min-w-0"><p className="text-sm font-bold">{fields.title || "Notificação"}</p><p className="mt-1 text-sm">{simulationText || "Digite uma mensagem para testar."}</p></div>
+        </div>
+      </div>
       <button type="submit" className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground">{busy ? "Salvando…" : "Salvar notificações"}</button>
     </fieldset>
     {feedback && <p role="status" className="text-sm">{feedback}</p>}
