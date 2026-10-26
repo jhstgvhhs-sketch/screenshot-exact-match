@@ -538,6 +538,7 @@ export function DraftProductEditor({
   onSaved: () => void;
 }) {
   const variants = [...product.product_variants].sort((a, b) => a.sort - b.sort);
+  const simpleProduct = variants.length === 1 && variants[0].color === "Padrão";
   const [mainImage, setMainImage] = useState(product.images?.[0] ?? "");
   const [colorImages, setColorImages] = useState<Record<string, string>>(() =>
     Object.fromEntries(variants.map((v, i) => [v.id, product.images?.[i + 1] ?? ""])),
@@ -568,12 +569,12 @@ export function DraftProductEditor({
       setFeedback("Use links de imagens HTTPS válidos.");
       return;
     }
-    if (publish && urls.some((u) => !u)) {
-      setFeedback("Adicione a foto principal e uma foto para cada cor antes de publicar.");
+    if (publish && (simpleProduct ? !urls[0] : urls.some((u) => !u))) {
+      setFeedback(simpleProduct ? "Adicione a foto principal antes de publicar." : "Adicione a foto principal e uma foto para cada cor antes de publicar.");
       return;
     }
     // Positional mapping: images[0] is main image, images[i+1] follows variant sort.
-    const images = publish ? urls : urls.slice(0, urls.findLastIndex(Boolean) + 1);
+    const images = simpleProduct ? [urls[0]] : publish ? urls : urls.slice(0, urls.findLastIndex(Boolean) + 1);
     setBusy(true);
     setFeedback("");
     try {
@@ -607,8 +608,8 @@ export function DraftProductEditor({
         disabled={busy || uploading}
         onUploadingChange={setUploading}
       />
-      <p className="mt-4 text-sm font-semibold">Fotos por cor</p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      {!simpleProduct && <p className="mt-4 text-sm font-semibold">Fotos por cor</p>}
+      {!simpleProduct && <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {variants.map((v) => (
           <ProductImageField
             key={v.id}
@@ -619,7 +620,7 @@ export function DraftProductEditor({
             onUploadingChange={setUploading}
           />
         ))}
-      </div>
+      </div>}
       {feedback && (
         <p role="status" className="mt-4 text-sm">
           {feedback}
