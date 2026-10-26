@@ -22,6 +22,20 @@ const m = vi.hoisted(() => ({
   },
 }));
 vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    params,
+    ...props
+  }: {
+    children: React.ReactNode;
+    to: string;
+    params?: { slug: string };
+  }) => (
+    <a href={params ? to.replace("$slug", params.slug) : to} {...props}>
+      {children}
+    </a>
+  ),
   createFileRoute: () => () => ({
     useParams: () => ({ slug: "pla" }),
     useSearch: () => ({}),
@@ -35,7 +49,10 @@ vi.mock("@tanstack/react-query", () => ({
   queryOptions: (value: unknown) => value,
 }));
 vi.mock("@/lib/cart", () => ({ useCart: () => ({ items: [], add: m.add }) }));
-vi.mock("@/components/site/ProductReviews", () => ({ ProductReviews: () => null }));
+vi.mock("@/components/site/ProductReviews", () => ({
+  ProductReviews: () => null,
+  ProductReviewSummary: () => null,
+}));
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -96,6 +113,35 @@ describe("Product gallery and purchase preservation", () => {
       );
     } finally {
       Object.assign(m.product, original);
+    }
+  });
+  it("keeps full description below the price and supports previous/next gallery navigation", () => {
+    render(<ProdutoPage />);
+    const price = screen.getByText("no PIX");
+    const description = screen.getByText("Descrição real");
+    expect(
+      price.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Próxima foto"));
+    expect(screen.getByLabelText("Ampliar foto do produto").querySelector("img")).toHaveAttribute(
+      "src",
+      m.product.images[1],
+    );
+    fireEvent.click(screen.getByLabelText("Foto anterior"));
+    expect(screen.getByLabelText("Ampliar foto do produto").querySelector("img")).toHaveAttribute(
+      "src",
+      m.product.images[0],
+    );
+  });
+  it("does not manufacture variants for a product with none", () => {
+    const original = m.product.product_variants;
+    m.product.product_variants = [];
+    try {
+      render(<ProdutoPage />);
+      expect(screen.getByRole("button", { name: "Adicionar ao carrinho" })).toBeDisabled();
+      expect(m.add).not.toHaveBeenCalled();
+    } finally {
+      m.product.product_variants = original;
     }
   });
 });

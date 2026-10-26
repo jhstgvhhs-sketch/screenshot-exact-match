@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Truck, ShieldCheck, CreditCard, MapPin, ArrowRight } from "lucide-react";
 import { HomeImages, HomeHeroText } from "@/components/site/HomeImages";
+import { StoreBenefits } from "@/components/site/StoreBenefits";
 import { SiteReviews } from "@/components/site/SiteReviews";
 import hero from "@/assets/hero.jpg";
 import { ProductCard } from "@/components/site/ProductCard";
@@ -113,6 +114,8 @@ function Index() {
         </div>
       </section>
 
+      {categories.filter(category => products.some(product => product.category_id === category.id)).map(category => <section key={category.id} className="container-x mt-12"><div className="flex items-center justify-between gap-3"><h2 className="text-2xl font-bold">{category.name}</h2><Link to="/produtos" search={{ categoria: category.slug }} className="min-h-11 shrink-0 py-3 text-sm font-semibold text-primary">Ver categoria</Link></div><div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">{products.filter(product => product.category_id === category.id).slice(0, 4).map(product => <ProductCard key={product.id} p={product} />)}</div></section>)}
+      <StoreBenefits />
       <SiteReviews />
 
       <section className="container-x mt-16">

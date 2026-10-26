@@ -114,3 +114,27 @@
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* Public storefront only: preserve the existing administrative theme. */
+.storefront {
+  --background: #101010;
+  --card: #151515;
+  --foreground: #f5f5f5;
+  --card-foreground: #f5f5f5;
+  --primary: #ff6a00;
+  --primary-foreground: #101010;
+  --secondary: #242424;
+  --muted: #242424;
+  --muted-foreground: #b5b5b5;
+  --border: #303030;
+  --input: #3c3c3c;
+  --ring: #ff6a00;
+  --gradient-primary: linear-gradient(#ff6a00, #ff6a00);
+  --shadow-glow: none;
+  background: var(--background);
+  color: var(--foreground);
+}
+.storefront input[type="number"] { -moz-appearance: textfield; }
+.storefront input[type="number"]::-webkit-inner-spin-button,
+.storefront input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.storefront a:focus-visible, .storefront button:focus-visible { outline: 2px solid #ff6a00; outline-offset: 3px; }

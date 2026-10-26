@@ -30,7 +30,7 @@ function Produtos() {
         (categoria.toLowerCase() === "petg" && /petg/i.test(`${p.material ?? ""} ${p.name}`)) ||
         (categoria.toLowerCase() === "pla" && /\bpla\b/i.test(`${p.material ?? ""} ${p.name}`)) ||
         (categoria.toLowerCase() === "acessorios" && /acess[oó]rio/i.test(`${p.categories?.name ?? ""} ${p.name}`))) &&
-      (!q || `${p.name} ${p.brand} ${p.product_variants.map((v) => v.color).join(" ")}`.toLowerCase().includes(q.toLowerCase())),
+      (!q || `${p.name} ${p.brand} ${p.categories?.name ?? ""} ${p.material ?? ""} ${p.product_variants.map((v) => v.color).join(" ")}`.toLowerCase().includes(q.toLowerCase())),
   );
   return (
     <section className="container-x py-10">
@@ -42,7 +42,7 @@ function Produtos() {
       </nav>
       {isError && <p role="alert">Não foi possível atualizar o catálogo. <button type="button" className="text-primary underline" onClick={() => void refetch()}>Tentar novamente</button></p>}
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {list.flatMap(p => p.product_variants.length ? p.product_variants.filter(v => !q || `${p.name} ${p.brand} ${v.color}`.toLowerCase().includes(q.toLowerCase())).map(v => <ProductCard key={v.id} p={p} variant={v} />) : [<ProductCard key={p.id} p={p} />])}
+        {list.flatMap(p => p.product_variants.length ? p.product_variants.filter(v => !q || `${p.name} ${p.brand} ${p.categories?.name ?? ""} ${p.material ?? ""} ${v.color}`.toLowerCase().includes(q.toLowerCase())).map(v => <ProductCard key={v.id} p={p} variant={v} />) : [<ProductCard key={p.id} p={p} />])}
       </div>
       {!isLoading && list.length === 0 && <p className="mt-6 text-muted-foreground">Nenhum produto encontrado.</p>}
     </section>

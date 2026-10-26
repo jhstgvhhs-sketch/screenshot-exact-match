@@ -161,7 +161,7 @@ export function Checkout() {
         {validated && whatsappUrl && payment === "card" && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
         <button type="button" disabled={!!pixData || !!cardOrderId} onClick={() => { setStep("details"); setValidated(false); setWhatsappUrl(null); }} className="text-sm font-semibold text-primary underline">Voltar aos dados de entrega</button>
       </div>
-      <aside className="order-first flex min-w-0 h-fit flex-col gap-4 lg:order-none rounded-xl border border-border bg-card p-5 lg:sticky lg:top-24">
+      <aside className="order-first flex min-w-0 h-fit flex-col gap-4 lg:order-none rounded-xl border border-border bg-card p-5 lg:sticky lg:top-52">
         <h2 className="order-0 text-lg font-bold">Resumo do pedido</h2>
         <button type="button" aria-expanded={summaryOpen} aria-controls="checkout-product-summary" onClick={() => setSummaryOpen(!summaryOpen)} className="order-1 min-h-11 rounded-lg border border-border px-3 py-2 text-left text-sm font-semibold text-primary lg:hidden">{summaryOpen ? "Ocultar produtos do pedido" : "Ver produtos do pedido"}</button>
         <div id="checkout-product-summary" className={`order-3 lg:order-1 ${summaryOpen ? "" : "hidden lg:block"}`}>

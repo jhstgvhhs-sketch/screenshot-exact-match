@@ -36,7 +36,7 @@ function Carrinho() {
               </li>
             ))}
           </ul>
-          <aside className="h-fit space-y-3 rounded-2xl border border-border bg-card p-5 text-sm lg:sticky lg:top-28">
+          <aside className="h-fit space-y-3 rounded-2xl border border-border bg-card p-5 text-sm lg:sticky lg:top-52">
             {!eligibleForFreePixShipping && <p role="status" className="rounded-lg border border-primary/40 bg-primary/10 p-3 font-semibold text-foreground">Faltam apenas {brl(remainingForFreeShipping)} para ganhar frete grátis no Pix!</p>}
             {eligibleForFreePixShipping && <p role="status" className="rounded-lg border border-green-600/40 bg-green-600/10 p-3 font-semibold text-green-600">Parabéns! Você ganhou frete grátis no Pix!</p>}
             <div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div>

@@ -109,7 +109,7 @@ describe("Existing catalog editors", () => {
     fireEvent.change(screen.getByLabelText("Nome"), {
       target: { value: "Filamento PLA de teste" },
     });
-    fireEvent.change(screen.getByLabelText("Identificador (URL)"), {
+    fireEvent.change(screen.getByLabelText(/^Identificador \(URL\)/), {
       target: { value: "filamento-pla-teste" },
     });
     fireEvent.change(screen.getByLabelText("Preço (R$)"), { target: { value: "59,90" } });

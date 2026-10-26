@@ -128,14 +128,14 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <CartProvider>
-          {isAdminRoute ? <Outlet /> : <>
+          {isAdminRoute ? <Outlet /> : <div className="storefront min-h-screen">
           <Header />
           <main className="min-h-[60vh]">
             <Outlet />
           </main>
           <Footer />
           <RecentPurchases />
-          </>}
+          </div>}
           <Toaster richColors position="top-center" />
         </CartProvider>
       </AuthProvider>

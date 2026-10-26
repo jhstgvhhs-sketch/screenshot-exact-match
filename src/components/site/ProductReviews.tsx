@@ -7,6 +7,24 @@ import { useAuth } from "@/lib/auth";
 type Review = { id: string; product_id: string | null; author_name: string; rating: number; comment: string; approved: boolean; created_at: string; source?: string };
 const reviewsTable = () => (supabase as unknown as { from: (name: string) => any }).from("product_reviews");
 
+function useProductReviews(productId: string) {
+  return useQuery<Review[]>({
+    queryKey: ["reviews", productId],
+    queryFn: async () => {
+      const { data, error } = await reviewsTable().select("id,product_id,author_name,rating,comment,approved,created_at,source").eq("product_id", productId).eq("approved", true).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function ProductReviewSummary({ productId }: { productId: string }) {
+  const { data: reviews = [], isError } = useProductReviews(productId);
+  if (isError || !reviews.length) return null;
+  const average = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+  return <a href="#product-reviews" className="inline-flex min-h-11 items-center gap-2 text-sm"><span className="text-primary" aria-hidden="true">{"★".repeat(Math.round(average))}{"☆".repeat(5 - Math.round(average))}</span><span>{average.toFixed(1).replace(".", ",")}/5 · {reviews.length} avaliação(ões)</span></a>;
+}
+
 export function ProductReviews({ productId }: { productId: string }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -15,14 +33,7 @@ export function ProductReviews({ productId }: { productId: string }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const { data: reviews = [], isError } = useQuery<Review[]>({
-    queryKey: ["reviews", productId],
-    queryFn: async () => {
-      const { data, error } = await reviewsTable().select("id,product_id,author_name,rating,comment,approved,created_at,source").eq("product_id", productId).eq("approved", true).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: reviews = [], isError } = useProductReviews(productId);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true); setMessage("");
@@ -34,7 +45,7 @@ export function ProductReviews({ productId }: { productId: string }) {
     finally { setBusy(false); }
   }
   const average = reviews.length ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null;
-  return <section className="container-x pb-14">
+  return <section id="product-reviews" className="container-x scroll-mt-48 py-10">
     <h2 className="text-2xl font-bold">Avaliações de clientes</h2>
     <p className="mt-2 text-muted-foreground">{average ? `★ ${average}/5 · ${reviews.length} avaliação(ões)` : "Ainda não há avaliações publicadas."}</p>
     {isError && <p className="mt-3 text-sm text-destructive">Avaliações indisponíveis. Verifique a configuração do banco.</p>}
