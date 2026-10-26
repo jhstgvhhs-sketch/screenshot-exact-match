@@ -17,7 +17,7 @@ const benefits = [
   {
     Icon: Truck,
     title: "Envio para todo o Brasil",
-    text: "Condições de frete e entrega disponíveis no checkout.",
+    text: "Impressoras com frete grátis. Consulte as demais condições no checkout.",
     slug: "envio",
   },
   {

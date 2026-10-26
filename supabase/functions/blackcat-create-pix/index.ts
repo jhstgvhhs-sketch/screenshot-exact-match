@@ -50,11 +50,11 @@ Deno.serve(async (request) => {
   if (orderError || !orderId) return json({ error: orderError?.message ?? "Falha ao criar pedido" }, 409);
   const { data: order } = await admin.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).single();
   if (!order) return json({ error: "Pedido não encontrado", orderId }, 500);
-  const { data: lines } = await admin.from("order_items").select("product_name,unit_price,quantity").eq("order_id", orderId);
+  const { data: lines } = await admin.from("order_items").select("product_name,unit_price,quantity,products(categories(slug))").eq("order_id", orderId);
   const amount = Math.round(Number(order.total) * 100);
   if (!lines?.length || !Number.isSafeInteger(amount) || amount <= 0)
     return json({ error: "Pedido requer revisão", orderId }, 503);
-  const charge = await createBlackcatPix(blackcatPixPayload(order, lines, orderId, postbackUrl));
+  const charge = await createBlackcatPix(blackcatPixPayload(order, lines.map(line => ({ ...line, category_slug: line.products?.categories?.slug })), orderId, postbackUrl));
   if (!charge?.transactionId || !charge?.paymentData?.copyPaste)
     return json({ error: "Resposta do gateway requer conciliação", orderId }, 503);
   const { error: ledgerError } = await admin.from("pix_transactions").insert({

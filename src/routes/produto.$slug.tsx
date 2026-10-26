@@ -94,7 +94,8 @@ function ProdutoContent() {
 
   const limit = v
     ? quantityLimit({
-        variantId: v.id,
+        categorySlug: p.categories?.slug,
+      variantId: v.id,
         productSlug: p.slug,
         name: p.name,
         color: v.color,
@@ -116,6 +117,7 @@ function ProdutoContent() {
       return;
     }
     cart.add({
+      categorySlug: p.categories?.slug,
       variantId: v.id,
       productSlug: p.slug,
       name: p.name,
@@ -160,7 +162,8 @@ function ProdutoContent() {
             {p.brand && <p className="text-sm font-semibold">{p.brand}</p>}
           </div>
           <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{p.name}</h1>
-          <ProductReviewSummary productId={p.id} />
+          {p.categories?.slug === "impressoras" && <p className="text-sm font-bold text-green-500">Frete grátis nesta impressora — Pix ou cartão.</p>}
+        <ProductReviewSummary productId={p.id} />
           {(p.material || p.weight || p.diameter) && (
             <dl className="flex flex-wrap gap-2 text-xs">
               {(
@@ -333,7 +336,7 @@ function ProdutoContent() {
                 {addr.street}, {addr.district} — {addr.city}/{addr.state}
                 <br />
                 <span className="text-muted-foreground">
-                  Frete fixo: {brl(FIXED_SHIPPING_BRL)}. Grátis acima de R$ 600,00 no Pix.
+                  {p.categories?.slug === "impressoras" ? "Frete grátis na compra desta impressora, no Pix ou cartão." : <>Frete fixo: {brl(FIXED_SHIPPING_BRL)}. Grátis acima de R$ 600,00 no Pix.</>}
                 </span>
               </p>
             )}

@@ -22,3 +22,13 @@ describe('Blackcat Pix payload', () => {
     for (const quantity of [0, 11, 1.5]) expect(() => blackcatPixPayload(order, [{ ...lines[0]!, quantity }], 'id', 'https://example.com')).toThrow();
   });
 });
+
+describe('Printer Pix payload eligibility', () => {
+  it('accepts zero freight below R$ 600 only with a server-resolved printer category', () => {
+    const printer = [{ product_name: 'Modelo cadastrado', category_slug: 'impressoras', unit_price: 500, quantity: 1 }];
+    const result = blackcatPixPayload({ ...order, total: 500, shipping: 0 }, printer, 'id', 'https://example.com');
+    expect(result.amount).toBe(50000);
+    expect(result.items).toHaveLength(1);
+    expect(() => blackcatPixPayload({ ...order, total: 500, shipping: 0 }, [{ ...printer[0], category_slug: 'acessorios', product_name: 'Impressora no título' }], 'id', 'https://example.com')).toThrow();
+  });
+});

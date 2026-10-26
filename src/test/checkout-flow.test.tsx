@@ -1,10 +1,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CartItem } from "@/lib/cart";
 import { Checkout } from "../routes/checkout";
 
 const cart = vi.hoisted(() => ({
   subtotal: 59.9,
-  items: [{ variantId: "v1", name: "PLA", color: "Branco", quantity: 1, price: 59.9 }],
+  items: [{ productSlug: "pla", variantId: "v1", name: "PLA", color: "Branco", quantity: 1, price: 59.9 }] as CartItem[],
 }));
 vi.mock("@/lib/cart", () => ({ useCart: () => cart }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
@@ -69,5 +70,24 @@ describe("Compact checkout presentation", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById("checkout-product-summary")).not.toHaveClass("hidden");
     expect(screen.getByText(/PLA — Branco/)).toBeInTheDocument();
+  });
+});
+
+
+describe("Printer checkout shipping", () => {
+  it("keeps freight zero on card and does not block the customer with the Pix-only freight offer", () => {
+    const original = cart.items;
+    cart.items = [{ variantId: "printer", productSlug: "modelo", name: "Modelo cadastrado", categorySlug: "impressoras", color: "Padrão", price: 650, quantity: 1 }];
+    cart.subtotal = 650;
+    try {
+      render(<Checkout />);
+      expect(screen.getByText("Frete grátis — impressora")).toBeInTheDocument();
+      fireEvent.submit(document.getElementById("checkout-form")!);
+      fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+      expect(screen.getByText("Frete grátis — impressora")).toBeInTheDocument();
+      expect(screen.queryByText("Frete grátis no Pix! Não quer aproveitar?")).not.toBeInTheDocument();
+      expect(screen.queryByText("Frete fixo")).not.toBeInTheDocument();
+      expect(screen.getAllByText(/650,00/).length).toBeGreaterThan(0);
+    } finally { cart.items = original; }
   });
 });

@@ -13,6 +13,7 @@ export type CartItem = {
   image?: string;
   quantity: number;
   stock?: number;
+  categorySlug?: string | null;
 };
 
 type Ctx = {
@@ -51,10 +52,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     async function refreshStock() {
-      const { data, error } = await supabase.from("product_variants").select("id, stock");
+      const { data, error } = await supabase.from("product_variants").select("id, stock, products(categories(slug))");
       if (!active || error || !data) return;
-      const stock = new Map(data.map(v => [v.id, v.stock]));
-      setItems(prev => restoreCart(prev.filter(i => stock.has(i.variantId)).map(i => ({ ...i, stock: stock.get(i.variantId)! }))));
+      const stock = new Map(data.map(v => [v.id, v]));
+      setItems(prev => restoreCart(prev.filter(i => stock.has(i.variantId)).map(i => ({ ...i, stock: stock.get(i.variantId)!.stock, categorySlug: stock.get(i.variantId)!.products?.categories?.slug }))));
     }
     if (loaded) void refreshStock();
     const refresh = () => { void refreshStock(); };

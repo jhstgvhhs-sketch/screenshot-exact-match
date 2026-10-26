@@ -47,7 +47,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="bg-primary px-3 py-1.5 text-center text-[10px] font-bold tracking-widest text-primary-foreground sm:text-xs">
-        FRETE GRÁTIS ACIMA DE R$ 600,00 NO PIX
+        IMPRESSORAS COM FRETE GRÁTIS · DEMAIS PEDIDOS ACIMA DE R$ 600,00 NO PIX
       </div>
       <div className="container-x flex min-h-20 items-center gap-3 py-3 lg:min-h-24 lg:gap-7">
         <button

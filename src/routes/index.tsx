@@ -76,7 +76,7 @@ function Index() {
 
       <section className="container-x mt-16 grid gap-4 md:grid-cols-4">
         {[
-          [Truck, "Envio para todo o Brasil", `Frete fixo de ${brl(SHIPPING_FLAT)} · grátis acima de R$ 600 no Pix`],
+          [Truck, "Envio para todo o Brasil", `Impressoras com frete grátis · demais pedidos: ${brl(SHIPPING_FLAT)}, grátis acima de R$ 600 no Pix`],
           [MapPin, "Endereço pelo CEP", "Digite o CEP e preenchemos o endereço"],
           [CreditCard, "Formas de pagamento", "Pix no checkout · cartão de crédito via WhatsApp"],
           [ShieldCheck, "Dados protegidos", "Não armazenamos dados de cartão"],

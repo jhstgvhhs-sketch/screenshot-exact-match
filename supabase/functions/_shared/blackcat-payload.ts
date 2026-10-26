@@ -5,7 +5,7 @@ type Order = {
   ship_street: string; ship_number: string; ship_complement?: string | null;
   ship_district: string; ship_city: string; ship_state: string; ship_cep: string;
 };
-type Line = { product_name: string; unit_price: number | string; quantity: number };
+type Line = { category_slug?: string | null; product_name: string; unit_price: number | string; quantity: number };
 const digits = (value: string) => value.replace(/\D/g, "");
 const cents = (value: number | string) => Math.round(Number(value) * 100);
 
@@ -17,7 +17,7 @@ export function blackcatPixPayload(order: Order, lines: Line[], orderId: string,
   if (!Number.isSafeInteger(amount) || amount <= 0 || (shipping !== 3780 && shipping !== 0) || !lines.length)
     throw new Error("Total ou frete inválido");
   const subtotal = lines.reduce((sum, line) => sum + cents(line.unit_price) * line.quantity, 0);
-  if (shipping === 0 && subtotal <= 60000) throw new Error("Frete grátis Pix exige subtotal superior a R$ 600");
+  if (shipping === 0 && subtotal <= 60000 && !lines.some(line => line.category_slug === "impressoras")) throw new Error("Frete grátis Pix exige subtotal superior a R$ 600");
   const items = lines.map(line => {
     const unitPrice = cents(line.unit_price);
     if (!Number.isSafeInteger(unitPrice) || unitPrice < 0 || !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 10)

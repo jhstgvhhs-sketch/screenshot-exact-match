@@ -15,3 +15,11 @@ describe("Review before generating a payment",()=>{
   read.mockResolvedValue({error:{message:"Unavailable"}});await expect(reviewCheckoutItems([item])).rejects.toThrow(/conferir os produtos/);
  });
 });
+
+
+it("refreshes category from the catalog instead of trusting a saved free-shipping flag", async () => {
+  read.mockResolvedValue({ data: [{ name: "Produto", slug: "item", price: 500, categories: { slug: "acessorios" }, images: [], product_variants: [{ id: "v", color: "Padrão", stock: 1 }] }] });
+  const result = await reviewCheckoutItems([{ variantId: "v", name: "Produto", productSlug: "item", color: "Padrão", price: 500, quantity: 1, categorySlug: "impressoras" }]);
+  expect(result.changed).toBe(true);
+  expect(result.current[0].categorySlug).toBe("acessorios");
+});

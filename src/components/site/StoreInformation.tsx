@@ -38,7 +38,7 @@ export function StoreInformation({ section }: { section: string }) {
           <p>A {name} informa atendimento a pedidos com envio para todo o Brasil. Confira se o endereço e o CEP estão corretos antes de finalizar a compra.</p>
         </Section>
         <Section title="Valor do frete">
-          <p>O frete padrão exibido no checkout é de <strong className="text-foreground">{brl(FIXED_SHIPPING_BRL)}</strong>. Em pedidos com subtotal superior a <strong className="text-foreground">R$ 600,00</strong>, o frete é grátis <strong className="text-foreground">exclusivamente no Pix</strong>. O benefício não se aplica ao cartão e não vale para subtotal exatamente igual a R$ 600,00.</p>
+          <p>O frete padrão exibido no checkout é de <strong className="text-foreground">{brl(FIXED_SHIPPING_BRL)}</strong>. Em pedidos com subtotal superior a <strong className="text-foreground">R$ 600,00</strong>, o frete é grátis <strong className="text-foreground">exclusivamente no Pix</strong>. Nos pedidos sem impressora, esse benefício não se aplica ao cartão e não vale para subtotal exatamente igual a R$ 600,00. Na compra de qualquer impressora, o frete é grátis em qualquer valor e forma de pagamento.</p>
           <p>O resumo do pedido mostra os valores aplicados antes de concluir o pagamento.</p>
         </Section>
         <Section title="Prazo e processamento">

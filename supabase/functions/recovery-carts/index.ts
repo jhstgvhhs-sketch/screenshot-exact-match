@@ -20,7 +20,7 @@ Deno.serve(async request=>{
    if([...quantities.values()].some(q=>q>10))return json({error:"Limite por cor excedido"},400);
    const ids=[...quantities.keys()];let items:unknown[]=[];
    if(ids.length){
-    const {data,error}=await db.from("product_variants").select("id,color,products(id,name,slug,price,images,active)").in("id",ids);
+    const {data,error}=await db.from("product_variants").select("id,color,products(id,name,slug,price,images,active,categories(slug))").in("id",ids);
     if(error)throw error;
     items=(data??[]).filter((v:any)=>v.products?.active).map((v:any)=>({variant_id:v.id,quantity:quantities.get(v.id),name:v.products.name,color:v.color,price:Number(v.products.price)}));
    }
@@ -55,10 +55,10 @@ Deno.serve(async request=>{
    if(cart.status==="recovered"||cart.status==="expired"||Date.parse(cart.expires_at)<=Date.now())return json({error:"Este carrinho já foi concluído ou expirou. Consulte seus pedidos em Minha conta."},410);
    if(cart.linked_order_id){const {data:order}=await db.from("orders").select("payment_method,payment_status,status").eq("id",cart.linked_order_id).single();if(order?.payment_method==="pix"&&["pending","pendente"].includes(order.payment_status)&&!["cancelado","cancelled"].includes(order.status))return json({error:"Já existe um Pix pendente para este carrinho. Consulte Minha conta antes de gerar outra cobrança."},409);}
    const ids=cart.items.map((item:any)=>item.variant_id);
-   const {data:variants,error:variantError}=await db.from("product_variants").select("id,color,stock,products(id,name,slug,price,images,active)").in("id",ids);
+   const {data:variants,error:variantError}=await db.from("product_variants").select("id,color,stock,products(id,name,slug,price,images,active,categories(slug))").in("id",ids);
    if(variantError)throw variantError;
    // Only current public catalog data is returned. Never return saved customer/contact fields.
-   const items=(variants??[]).filter((v:any)=>v.products?.active).map((v:any)=>({variantId:v.id,name:v.products.name,productSlug:v.products.slug,color:v.color,price:Number(v.products.price),image:v.products.images?.[0],stock:v.stock,quantity:Math.min(10,cart.items.find((item:any)=>item.variant_id===v.id)?.quantity??1)}));
+   const items=(variants??[]).filter((v:any)=>v.products?.active).map((v:any)=>({variantId:v.id,categorySlug:v.products.categories?.slug,name:v.products.name,productSlug:v.products.slug,color:v.color,price:Number(v.products.price),image:v.products.images?.[0],stock:v.stock,quantity:Math.min(10,cart.items.find((item:any)=>item.variant_id===v.id)?.quantity??1)}));
    return json({items,removed:ids.length-items.length});
   }
   await requireAdmin(request);
