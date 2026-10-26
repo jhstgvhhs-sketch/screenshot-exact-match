@@ -53,7 +53,7 @@ describe("Storefront feedbacks", () => {
     expect(mocks.select).toHaveBeenCalledWith("id,author_name,rating,comment,source", {
       count: "exact",
     });
-    expect(screen.getByText("(feedback cadastrado pela loja)")).toBeInTheDocument();
+    expect(screen.queryByText("(feedback cadastrado pela loja)")).not.toBeInTheDocument();
   });
   it("paginates without loading all reviews at once", async () => {
     mocks.range.mockResolvedValue({ data: [review], count: 7 });

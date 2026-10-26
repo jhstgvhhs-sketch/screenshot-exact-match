@@ -85,32 +85,4 @@ export function AdminAddReview({ products }: { products: { id: string; name: str
   </form>;
 }
 
-export function ReviewModeration() {
-  const client = useQueryClient();
-  const [message, setMessage] = useState("");
-  const { data: pending = [] } = useQuery<Review[]>({
-    queryKey: ["reviews-pending"],
-    queryFn: async () => {
-      const { data, error } = await reviewsTable().select("*").eq("approved", false).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  async function moderate(id: string, approve: boolean) {
-    setMessage("");
-    const result = approve ? await reviewsTable().update({ approved: true }).eq("id", id).select("id").single() : await reviewsTable().delete().eq("id", id).select("id").single();
-    if (result.error) { setMessage(result.error.message); return; }
-    setMessage(approve ? "Avaliação aprovada." : "Avaliação removida.");
-    void client.invalidateQueries({ queryKey: ["reviews-pending"] });
-    void client.invalidateQueries({ queryKey: ["reviews"] });
-  }
-  return <section className="mt-10 rounded-xl border border-border bg-card p-5">
-    <h2 className="text-xl font-bold">Feedbacks aguardando aprovação</h2>
-    {!pending.length && <p className="mt-3 text-sm text-muted-foreground">Nenhuma avaliação pendente.</p>}
-    <div className="mt-4 space-y-3">{pending.map(r => <div key={r.id} className="rounded-lg border border-border p-4">
-      <p className="text-xs text-muted-foreground">{r.product_id ? "Avaliação de produto" : "Avaliação da loja"}</p><p className="font-semibold">{r.author_name} — {r.rating}/5</p><p className="mt-2 text-sm">{r.comment}</p>
-      <div className="mt-3 flex gap-3"><button onClick={() => void moderate(r.id,true)} className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground">Aprovar</button><button onClick={() => void moderate(r.id,false)} className="rounded-lg border border-destructive px-4 py-2 text-destructive">Rejeitar</button></div>
-    </div>)}</div>
-    {message && <p role="status" className="mt-3 text-sm">{message}</p>}
-  </section>;
-}
+export { ReviewModeration } from "@/components/admin/ReviewModeration";

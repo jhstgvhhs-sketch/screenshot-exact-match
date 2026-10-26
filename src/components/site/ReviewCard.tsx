@@ -8,14 +8,7 @@ export type PublicReview = {
 export function ReviewCard({ review }: { review: PublicReview }) {
   return (
     <article className="rounded-xl border border-border bg-card p-5">
-      <p className="font-semibold">
-        {review.author_name}
-        {review.source === "admin" && (
-          <span className="ml-2 text-xs font-normal text-muted-foreground">
-            (feedback cadastrado pela loja)
-          </span>
-        )}
-      </p>
+      <p className="font-semibold">{review.author_name}</p>
       <p aria-label={`${review.rating} de 5 estrelas`} className="mt-2 text-primary">
         {"★".repeat(review.rating)}
         {"☆".repeat(5 - review.rating)}
