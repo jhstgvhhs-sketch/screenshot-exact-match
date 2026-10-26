@@ -113,7 +113,7 @@ export function Checkout() {
   const fieldClass = "w-full rounded-lg border border-input bg-background px-3 py-2 text-base text-foreground sm:text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   return <section className="container-x py-10">
     <h1 className="text-3xl font-bold">{step === "details" ? "Dados de entrega" : "Pagamento"}</h1>
-    <p className="mt-2 text-sm text-muted-foreground">{step === "details" ? "Etapa 1 de 2 — Informe seus dados para continuar ao pagamento." : "Etapa 2 de 2 — Escolha a forma de pagamento. Nenhuma cobrança será feita automaticamente."}</p>
+    <p className="mt-2 text-sm text-muted-foreground">{step === "details" ? "Etapa 1 de 2 — Informe seus dados para continuar ao pagamento." : "Etapa 2 de 2 — Confira as condições e escolha a forma de pagamento antes de gerar o Pix ou seguir para o cartão."}</p>
     <nav aria-label="Etapas da compra" className="mt-6"><ol className="flex gap-3 text-sm">{["Dados de entrega", "Pagamento"].map((label, index) => <li key={label} aria-current={(step === "details" ? 0 : 1) === index ? "step" : undefined} className={`flex flex-1 items-center gap-2 rounded-lg border p-3 ${index === 0 || step === "payment" ? "border-primary/50 bg-primary/10" : "border-border text-muted-foreground"}`}><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{index === 0 && step === "payment" ? "✓" : index + 1}</span>{label}</li>)}</ol></nav>
     <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
       <form hidden={step !== "details"} id="checkout-form" onSubmit={handleSubmit} onChange={event => { setValidated(false); setWhatsappUrl(null); captureRecoveryContact(event.currentTarget); }} className="space-y-6">
@@ -135,11 +135,11 @@ export function Checkout() {
           <legend className="px-2 font-bold">Escolha como pagar</legend>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
             <input type="radio" name="payment" disabled={!!pixData || !!cardOrderId} checked={payment === "pix"} onChange={() => { setPayment("pix"); setCardShippingConfirmed(false); setValidated(false); }} className="mt-1 accent-primary" />
-            <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">Gere o código Pix e confira a confirmação do pagamento nesta página.</span></span>
+            <span><strong>Pix</strong><span className="block text-xs text-muted-foreground">O preço anunciado é para Pix. Gere o código e acompanhe a confirmação do pagamento nesta página.</span></span>
           </label>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
             <input type="radio" name="payment" disabled={!!pixData || !!cardOrderId} checked={payment === "card"} onChange={() => { setPayment("card"); setCardShippingConfirmed(false); setValidated(false); }} className="mt-1 accent-primary" />
-            <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Continue pelo atendimento para combinar o pagamento.</span></span>
+            <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Parcelamento sujeito aos juros da maquineta. Simule as parcelas e o valor final com nosso atendimento pelo WhatsApp.</span></span>
           </label>
         </fieldset>
         {payment === "card" && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed && (
