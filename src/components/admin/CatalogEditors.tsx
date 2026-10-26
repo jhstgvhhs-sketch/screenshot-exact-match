@@ -418,15 +418,17 @@ export function NewProductForm({
 }) {
   const [categoryId, setCategoryId] = useState("");
   const category = categories.find(c => c.id === categoryId);
-  const isFilament = category?.slug === "filamentos" || (!categoryId && false);
+  const isFilament = category?.slug === "filamentos";
   const [material, setMaterial] = useState("PLA");
   const [brand, setBrand] = useState("");
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [colors, setColors] = useState("");
   const [sku, setSku] = useState("");
+  const [skuEdited, setSkuEdited] = useState(false);
   const [stock, setStock] = useState("1");
   const [weight, setWeight] = useState("1kg");
   const [diameter, setDiameter] = useState("1,75mm");
@@ -434,26 +436,44 @@ export function NewProductForm({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState("");
+  function normalizedSlug(value: string) {
+    return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+  function suggestedSku(value: string) {
+    return "PROD-" + normalizedSlug(value).toUpperCase().slice(0, 45);
+  }
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (uploading) return;
-    const value = Number(price.replace(",", "."));
-    const names = [...new Set(colors.split("\n").map(s => s.trim()).filter(Boolean))];
-    const validStock = /^\d+$/.test(stock) && Number.isSafeInteger(Number(stock));
-    if (!categoryId || !name.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug.trim()) ||
-        !/^\d+([.,]\d{1,2})?$/.test(price.trim()) || !Number.isFinite(value) || value <= 0 ||
-        (isFilament ? !names.length : (!sku.trim() || !validStock))) {
-      setFeedback("Confira categoria, nome, identificador, preço e " + (isFilament ? "cores." : "SKU e estoque."));
+    const normalizedPrice = price.trim().replace(/^R\\$\\s*/, "").replace(/\\s/g, "");
+    const parsedPrice = normalizedPrice.includes(",")
+      ? normalizedPrice.replace(/\\./g, "").replace(",", ".")
+      : normalizedPrice;
+    const value = Number(parsedPrice);
+    const names = [...new Set(colors.split("\\n").map(v => v.trim()).filter(Boolean))];
+    const validStock = /^\\d+$/.test(stock.trim()) && Number.isSafeInteger(Number(stock));
+    const finalSlug = normalizedSlug(slug || name);
+    const finalSku = (sku.trim() || suggestedSku(name)).toUpperCase();
+    const errors: string[] = [];
+    if (!categoryId || !category) errors.push("Selecione uma categoria.");
+    if (!name.trim()) errors.push("Informe o nome do produto.");
+    if (!finalSlug) errors.push("Informe um nome ou identificador válido para a URL.");
+    if (!/^(?:\\d+)(?:\\.\\d{1,2})?$/.test(parsedPrice) || !Number.isFinite(value) || value <= 0) errors.push("Informe um preço válido, como 59,90.");
+    if (isFilament && names.length === 0) errors.push("Informe pelo menos uma cor, uma por linha.");
+    if (!isFilament && !finalSku) errors.push("Informe o SKU ou o nome para gerar um código.");
+    if (!isFilament && !validStock) errors.push("O estoque deve ser um número inteiro igual ou maior que zero.");
+    if (errors.length) {
+      setFeedback(errors.join(" "));
       return;
     }
     setBusy(true);
     setFeedback("");
     try {
-      const { data: existing, error: lookupError } = await supabase.from("products").select("id").eq("slug", slug.trim()).maybeSingle();
+      const { data: existing, error: lookupError } = await supabase.from("products").select("id").eq("slug", finalSlug).maybeSingle();
       if (lookupError) throw lookupError;
       if (existing) throw new Error("Já existe um produto com este identificador.");
       const { data: product, error } = await supabase.from("products").insert({
-        name: name.trim(), slug: slug.trim(), price: value, brand: brand.trim() || null,
+        name: name.trim(), slug: finalSlug, price: value, brand: brand.trim() || null,
         material: isFilament ? material.trim() || null : null,
         weight: isFilament ? weight.trim() || null : null,
         diameter: isFilament ? diameter.trim() || null : null,
@@ -468,7 +488,7 @@ export function NewProductForm({
             sku: "FIL-" + product.id.slice(0, 8) + "-" + (index + 1).toString().padStart(2, "0"),
             stock: 1, sort: index,
           }))
-        : [{ product_id: product.id, color: "Padrão", sku: sku.trim(), stock: Number(stock), sort: 0 }];
+        : [{ product_id: product.id, color: "Padrão", sku: finalSku, stock: Number(stock), sort: 0 }];
       const { error: variantsError } = await supabase.from("product_variants").insert(rows);
       if (variantsError) throw new Error("Produto criado como inativo, mas não foi possível salvar a opção de compra: " + variantsError.message);
       setFeedback("Produto cadastrado como INATIVO. Revise as fotos e publique quando estiver pronto.");
@@ -490,8 +510,8 @@ export function NewProductForm({
       </label>
       {!categories.length && <p role="alert" className="mt-2 text-sm text-primary">Cadastre uma categoria na administração antes de adicionar produtos.</p>}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-semibold">Nome<input required value={name} onChange={e => setName(e.target.value)} className={inputClass} /></label>
-        <label className="text-sm font-semibold">Identificador (URL)<input required value={slug} onChange={e => setSlug(e.target.value)} placeholder="exemplo-impressora-3d" className={inputClass} /></label>
+        <label className="text-sm font-semibold">Nome<input required value={name} onChange={e => { setName(e.target.value); if (!slugEdited) setSlug(normalizedSlug(e.target.value)); if (!skuEdited) setSku(suggestedSku(e.target.value)); }} className={inputClass} /></label>
+        <label className="text-sm font-semibold">Identificador (URL)<input required value={slug} onChange={e => { setSlugEdited(true); setSlug(e.target.value); }} placeholder="exemplo-impressora-3d" className={inputClass} /><span className="mt-1 block text-xs font-normal text-muted-foreground">Gerado automaticamente a partir do nome. Você pode alterar.</span></label>
         <label className="text-sm font-semibold">Preço (R$)<input required inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} className={inputClass} /></label>
         <label className="text-sm font-semibold">Marca<input value={brand} onChange={e => setBrand(e.target.value)} className={inputClass} /></label>
         <ProductImageField label="Foto principal (opcional)" value={imageUrl} onChange={setImageUrl} disabled={busy || uploading} onUploadingChange={setUploading} />
@@ -513,12 +533,12 @@ export function NewProductForm({
         </div>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="text-sm font-semibold">SKU do produto<input required value={sku} onChange={e => setSku(e.target.value)} className={inputClass} /></label>
+          <label className="text-sm font-semibold">SKU do produto<input required value={sku} onChange={e => { setSkuEdited(true); setSku(e.target.value); }} className={inputClass} /><span className="mt-1 block text-xs font-normal text-muted-foreground">Código gerado automaticamente. Altere se já utiliza um SKU próprio.</span></label>
           <label className="text-sm font-semibold">Estoque inicial<input required type="number" min={0} step={1} value={stock} onChange={e => setStock(e.target.value)} className={inputClass} /></label>
           <p className="text-xs text-muted-foreground sm:col-span-2">Produto simples: não exige cores. Caso tenha modelos diferentes, você poderá adicionar opções após o cadastro.</p>
         </div>
       )}
-      {feedback && <p role="status" className="mt-4 text-sm">{feedback}</p>}
+      {feedback && <p role="alert" className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{feedback}</p>}
       <button disabled={busy || uploading || !categoryId} type="submit" className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">
         {busy ? "Cadastrando..." : "Cadastrar produto como inativo"}
       </button>
