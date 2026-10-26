@@ -1,4 +1,6 @@
-import { Check } from "lucide-react";
+import { Check, ShoppingCart, Truck, ShieldCheck, CreditCard, ArrowLeft, RotateCcw } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { PaymentPrice } from "@/components/site/PaymentPrice";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { productHead } from "@/lib/seo";
 import { createFileRoute, useNavigate, notFound } from "@tanstack/react-router";
@@ -68,16 +70,16 @@ function ProdutoContent() {
   };
 
   return (
-    <><section className="container-x grid gap-10 py-10 md:grid-cols-2">
-      <div className="min-w-0 space-y-3"><button type="button" className="w-full" aria-label="Ampliar foto do produto" onClick={() => setZoom(true)}><img src={selectedImage} alt={v ? `${p.name} — ${v.color}` : p.name} width={800} height={800} className="aspect-square w-full rounded-xl border border-border object-contain" /></button>
-        <div className="flex gap-2 overflow-x-auto pb-2">{p.images.filter(Boolean).map((image, index) => <button type="button" key={`${image}-${index}`} onClick={() => setGalleryImage(image)} aria-label={`Ver foto ${index + 1}`} aria-pressed={selectedImage === image} className="shrink-0 rounded-lg border border-border p-1 focus-visible:outline-primary"><img src={image} alt={`${p.name} — foto ${index + 1}`} loading="lazy" width={72} height={72} className="size-16 object-contain" /></button>)}</div>
+    <><div className="container-x pt-7"><Link to="/produtos" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="size-4" /> Voltar ao catálogo</Link></div><section className="container-x grid gap-7 py-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-10">
+      <div className="min-w-0 space-y-3"><button type="button" className="w-full overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-5" aria-label="Ampliar foto do produto" onClick={() => setZoom(true)}><img src={selectedImage} alt={v ? `${p.name} — ${v.color}` : p.name} width={800} height={800} className="aspect-square w-full rounded-xl object-contain" /></button>
+        <div className="flex gap-2 overflow-x-auto pb-2">{p.images.filter(Boolean).map((image, index) => <button type="button" key={`${image}-${index}`} onClick={() => setGalleryImage(image)} aria-label={`Ver foto ${index + 1}`} aria-pressed={selectedImage === image} className={`shrink-0 rounded-xl border p-1 focus-visible:outline-primary ${selectedImage === image ? "border-primary" : "border-border"}`}><img src={image} alt={`${p.name} — foto ${index + 1}`} loading="lazy" width={72} height={72} className="size-16 object-contain" /></button>)}</div>
         {zoom && <Dialog open={zoom} onOpenChange={setZoom}><DialogContent className="max-w-3xl"><DialogTitle>{p.name}</DialogTitle><DialogDescription>Imagem ampliada do produto selecionado.</DialogDescription><img src={selectedImage} alt={v ? `${p.name} — ${v.color}` : p.name} className="max-h-[70vh] w-full object-contain" /></DialogContent></Dialog>}
       </div>
-      <div className="space-y-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-primary">{p.brand}</p>
-        <h1 className="text-3xl font-bold">{p.name}</h1>
-        <p className="font-display text-3xl font-bold">{brl(p.price)}</p>
-        <p className="text-muted-foreground">{p.description}</p>
+      <div className="min-w-0 space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-bold uppercase tracking-wider text-primary">{p.brand}</p>{v && <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${v.stock > 0 ? "border-green-600/40 bg-green-600/10 text-green-500" : "border-border text-muted-foreground"}`}>{v.stock > 0 ? "Em estoque" : "Consulte disponibilidade"}</span>}</div>
+        <h1 className="text-3xl font-bold leading-tight sm:text-4xl">{p.name}</h1>
+        {p.description && <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{p.description}</p>}
+        <PaymentPrice price={p.price} productName={p.name} prominent />
         {(p.material || p.weight || p.diameter) && <dl className="grid grid-cols-3 gap-2 text-sm">
           {[["Material", p.material], ["Peso", p.weight], ["Diâmetro", p.diameter]].map(([k, val]) => (
             <div key={k} className="rounded-lg bg-card p-3"><dt className="text-muted-foreground">{k}</dt><dd className="font-semibold">{val ?? "—"}</dd></div>
@@ -103,11 +105,11 @@ function ProdutoContent() {
           <input type="number" min={1} max={Math.max(1, available)} value={Math.min(qty, Math.max(1, available))} aria-label="Quantidade" disabled={available === 0} onChange={(e) => setQty(Math.max(1, Math.min(Math.max(1, available), Math.floor(Number(e.target.value)) || 1)))} className="h-10 w-20 rounded-lg border border-input bg-card px-3" />
         </div>
         {v && inCart > 0 && <p role="status" className="text-sm text-muted-foreground">{inCart} unidade(s) deste produto no carrinho.</p>}
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="xl" disabled={!!v && available === 0} onClick={() => add(false)}>Adicionar ao carrinho</Button>
-          <Button variant="buy" size="xl" disabled={!!v && available === 0} onClick={() => add(true)}>Comprar agora</Button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button variant="buy" size="xl" className="w-full gap-2" disabled={!v || available === 0} onClick={() => add(false)}><ShoppingCart className="size-5" /> Adicionar ao carrinho</Button>
+          <Button variant="outline" size="xl" className="w-full" disabled={!v || available === 0} onClick={() => add(true)}>Comprar agora</Button>
         </div>
-        <div className="space-y-2 text-sm text-muted-foreground"><p>Enviamos para todo o Brasil.</p><p>Frete grátis acima de R$ 600,00 exclusivamente no Pix.</p><p>Nota fiscal e rastreio: solicite pelo WhatsApp em Meus Pedidos.</p><a href="/info/trocas" className="inline-block text-primary underline">Trocas e devoluções</a></div>
+        <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 text-sm sm:grid-cols-2"><div className="flex items-start gap-2"><Truck className="mt-0.5 size-5 shrink-0 text-primary" /><span>Envio para todo o Brasil. <strong className="block">Frete grátis acima de R$ 600 no Pix.</strong></span></div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" /><span>Informações de pagamento e pedido disponíveis no checkout.</span></div><div className="flex items-start gap-2"><CreditCard className="mt-0.5 size-5 shrink-0 text-primary" /><span>Cartão com juros da maquineta. Simule pelo WhatsApp.</span></div><Link to="/info/$slug" params={{ slug: "trocas" }} className="flex items-start gap-2 hover:text-primary"><RotateCcw className="mt-0.5 size-5 shrink-0 text-primary" /><span>Consulte nossa política de trocas e devoluções.</span></Link></div>
         <form className="rounded-xl border border-border bg-card p-4" onSubmit={async (e) => { e.preventDefault(); try { setAddr(await lookupCep(cep)); } catch (err) { toast.error((err as Error).message); } }}>
           <p className="mb-2 text-sm font-semibold">Consultar endereço pelo CEP</p>
           <div className="flex flex-wrap gap-2">
