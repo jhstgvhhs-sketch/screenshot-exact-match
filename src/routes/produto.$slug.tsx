@@ -48,8 +48,9 @@ function ProdutoContent() {
   if (isError) return <p role="alert" className="container-x py-10">Não foi possível carregar o produto. Atualize a página para tentar novamente.</p>;
   if (!p) return <p className="container-x py-10">Produto não encontrado.</p>;
   const selectedVariantId = vid ?? cor;
-  const v = p.product_variants.find((x) => x.id === selectedVariantId);
-  const selectedIndex = p.product_variants.findIndex(x => x.id === selectedVariantId);
+  const simpleProduct = p.categories?.slug !== "filamentos" && p.product_variants.length === 1 && p.product_variants[0].color === "Padrão";
+  const v = p.product_variants.find((x) => x.id === selectedVariantId) ?? (simpleProduct ? p.product_variants[0] : undefined);
+  const selectedIndex = p.product_variants.findIndex(x => x.id === v?.id);
   const variantImage = selectedIndex >= 0 ? (p.images?.[selectedIndex + 1] || productImage(p)) : productImage(p);
   const selectedImage = galleryImage ?? variantImage;
 
@@ -58,8 +59,8 @@ function ProdutoContent() {
   const available = Math.max(0, limit - inCart);
   const add = (go: boolean) => {
     const requested = Math.min(qty, Math.max(1, available));
-    if (!v) { toast.error("Selecione uma cor"); return; }
-    if (available < requested) { toast.error("Quantidade máxima disponível para essa cor atingida"); return; }
+    if (!v) { toast.error("Selecione uma opção do produto"); return; }
+    if (available < requested) { toast.error("Quantidade máxima disponível para este produto atingida"); return; }
     cart.add({ variantId: v.id, productSlug: p.slug, name: p.name, color: v.color, price: p.price, image: variantImage, quantity: requested, stock: v.stock });
     if (go) nav({ to: "/carrinho" });
     else toast.success("Adicionado ao carrinho");
@@ -76,13 +77,13 @@ function ProdutoContent() {
         <h1 className="text-3xl font-bold">{p.name}</h1>
         <p className="font-display text-3xl font-bold">{brl(p.price)}</p>
         <p className="text-muted-foreground">{p.description}</p>
-        <dl className="grid grid-cols-3 gap-2 text-sm">
+        {(p.material || p.weight || p.diameter) && <dl className="grid grid-cols-3 gap-2 text-sm">
           {[["Material", p.material], ["Peso", p.weight], ["Diâmetro", p.diameter]].map(([k, val]) => (
             <div key={k} className="rounded-lg bg-card p-3"><dt className="text-muted-foreground">{k}</dt><dd className="font-semibold">{val ?? "—"}</dd></div>
           ))}
-        </dl>
-        <div>
-          <p className="mb-2 text-sm font-semibold">Cor: {v?.color ?? "selecione"}</p>
+        </dl>}
+        {!simpleProduct && <div>
+          <p className="mb-2 text-sm font-semibold">{p.categories?.slug === "filamentos" ? "Cor" : "Modelo"}: {v?.color ?? "selecione"}</p>
           <div className="flex flex-wrap gap-2">
             {p.product_variants.map((x) => (
               <button key={x.id} onClick={() => { setVid(x.id); setGalleryImage(null); setQty(1); void nav({ to: "/produto/$slug", params: { slug }, search: { cor: x.id }, replace: true, resetScroll: false }); }} title={x.color} aria-label={x.color}
@@ -91,12 +92,12 @@ function ProdutoContent() {
             ))}
           </div>
           {v && <p className="mt-2 text-sm text-muted-foreground">{v.stock > 0 ? "Disponível" : /filamento/i.test(p.name) ? "Sob encomenda" : "Indisponível"}</p>}
-        </div>
+        </div>}
         <div className="flex items-center gap-3">
           <label className="text-sm">Qtd.</label>
           <input type="number" min={1} max={Math.max(1, available)} value={Math.min(qty, Math.max(1, available))} aria-label="Quantidade" disabled={available === 0} onChange={(e) => setQty(Math.max(1, Math.min(Math.max(1, available), Math.floor(Number(e.target.value)) || 1)))} className="h-10 w-20 rounded-lg border border-input bg-card px-3" />
         </div>
-        {v && inCart > 0 && <p role="status" className="text-sm text-muted-foreground">{inCart} unidade(s) dessa cor no carrinho.</p>}
+        {v && inCart > 0 && <p role="status" className="text-sm text-muted-foreground">{inCart} unidade(s) deste produto no carrinho.</p>}
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" size="xl" disabled={!!v && available === 0} onClick={() => add(false)}>Adicionar ao carrinho</Button>
           <Button variant="buy" size="xl" disabled={!!v && available === 0} onClick={() => add(true)}>Comprar agora</Button>
