@@ -95,7 +95,7 @@ function Index() {
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-widest text-primary">Compre com informação</p>
           <h2 id="trust-heading" className="mt-2 text-2xl font-bold md:text-3xl">Conheça a 3DFLEX antes de comprar</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">Confira como funciona o pagamento, quais são as condições de envio e como entrar em contato. Sem promessas de entrega não confirmadas ou selos de segurança sem verificação.</p>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">Confira como funciona o pagamento, quais são as condições de envio e como entrar em contato. Consulte as informações da loja e tire suas dúvidas antes de finalizar o pedido.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {([
               ["sobre", "Sobre a 3DFLEX", "Quem somos e como atendemos."],
