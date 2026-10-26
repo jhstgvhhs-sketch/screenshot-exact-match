@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HomeImages } from "@/components/site/HomeImages";
+import { HomeImages, HomeHeroText } from "@/components/site/HomeImages";
 import { HomeImagesEditor } from "@/components/site/HomeImagesEditor";
 import { validateHomeImages, type HomeImage } from "@/lib/home-images";
 const mocks = vi.hoisted(() => ({
@@ -8,6 +8,13 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   save: vi.fn(),
   upload: vi.fn(),
+}));
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to, ...props }: React.PropsWithChildren<{ to: string }>) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
 }));
 vi.mock("@/components/site/StoreSettings", () => ({
   useStoreSettings: () => ({ data: { homepage_images: mocks.images } }),
@@ -187,5 +194,38 @@ describe("Homepage image management", () => {
     );
     expect(() => validateHomeImages([{ ...first, alt: "" }])).toThrow(/Descreva/);
     expect(() => validateHomeImages(Array(9).fill(first))).toThrow(/8/);
+  });
+});
+
+describe("Hero catalog action", () => {
+  it("keeps exactly one catalog link when switching between default and custom banners", () => {
+    mocks.images = null;
+    const view = render(
+      <HomeImages>
+        <HomeHeroText />
+      </HomeImages>,
+    );
+    expect(screen.getAllByRole("link", { name: /Explorar produtos/ })).toHaveLength(1);
+    mocks.images = [{ url: "https://example.com/banner.jpg", alt: "Banner personalizado" }];
+    view.rerender(
+      <HomeImages>
+        <HomeHeroText />
+      </HomeImages>,
+    );
+    expect(screen.getAllByRole("link", { name: /Explorar produtos/ })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Explorar produtos/ })).toHaveAttribute(
+      "href",
+      "/produtos",
+    );
+    expect(screen.getByRole("link", { name: /Explorar produtos/ })).toHaveClass(
+      "pointer-events-auto",
+    );
+    mocks.images = [];
+    view.rerender(
+      <HomeImages>
+        <HomeHeroText />
+      </HomeImages>,
+    );
+    expect(screen.getAllByRole("link", { name: /Explorar produtos/ })).toHaveLength(1);
   });
 });

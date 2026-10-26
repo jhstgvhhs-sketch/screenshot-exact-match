@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { DEFAULT_HOME_COPY, type HomeImage } from "@/lib/home-images";
@@ -33,7 +35,13 @@ export function HomeImages({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [count, selected, paused, interacting, hidden, reducedMotion]);
   if (images == null) return <>{children}</>;
-  if (!images.length) return <h1 className="sr-only">3DFLEX — Sua próxima criação começa aqui</h1>;
+  if (!images.length)
+    return (
+      <section className="container-x py-8">
+        <h1 className="sr-only">3DFLEX — Sua próxima criação começa aqui</h1>
+        <ExploreProductsButton />
+      </section>
+    );
   const index = selected % images.length;
   return (
     <section
@@ -54,7 +62,7 @@ export function HomeImages({ children }: { children: ReactNode }) {
         fetchPriority="high"
         className="col-start-1 row-start-1 block h-auto w-full self-center object-contain md:absolute md:inset-0 md:h-full md:object-cover"
       />
-      <div className="container-x pointer-events-none relative col-start-1 row-start-1 flex items-center px-6 pt-4 pb-16 sm:px-12 md:py-36">
+      <div className="container-x pointer-events-none relative col-start-1 row-start-1 flex items-center px-6 pt-2 pb-14 sm:px-12 sm:pt-4 sm:pb-16 md:py-36">
         <HomeHeroText image={images[index]} />
       </div>
       {images.length > 1 && (
@@ -117,7 +125,7 @@ export function HomeHeroText({ image }: { image?: HomeImage }) {
   return (
     <div className="w-full max-w-xl break-words md:min-h-64">
       {eyebrow && (
-        <p className="mb-3 text-[10px] font-bold tracking-[0.22em] sm:text-xs md:mb-4 md:tracking-[0.3em] text-primary">
+        <p className="mb-1 text-[10px] font-bold tracking-[0.22em] sm:mb-3 sm:text-xs md:mb-4 md:tracking-[0.3em] text-primary">
           {eyebrow}
         </p>
       )}
@@ -131,10 +139,22 @@ export function HomeHeroText({ image }: { image?: HomeImage }) {
         {title || "3DFLEX"}
       </h1>
       {description && (
-        <p className="mt-3 max-w-md text-xs leading-relaxed text-white/85 sm:text-base md:mt-5 md:text-lg">
+        <p className="mt-2 max-w-md text-xs leading-relaxed text-white/85 sm:mt-3 sm:text-base md:mt-5 md:text-lg">
           {description}
         </p>
       )}
+      <ExploreProductsButton />
     </div>
+  );
+}
+
+function ExploreProductsButton() {
+  return (
+    <Link
+      to="/produtos"
+      className="pointer-events-auto relative z-10 mt-2 inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-lg bg-[#FF6A00] px-5 py-3 text-sm font-bold text-black shadow-sm transition-colors hover:bg-[#ff8129] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:mt-5 sm:px-7 sm:text-base md:mt-8"
+    >
+      Explorar produtos <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+    </Link>
   );
 }

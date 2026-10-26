@@ -5,7 +5,6 @@ import { Truck, ShieldCheck, CreditCard, MapPin, ArrowRight } from "lucide-react
 import { HomeImages, HomeHeroText } from "@/components/site/HomeImages";
 import { SiteReviews } from "@/components/site/SiteReviews";
 import hero from "@/assets/hero.jpg";
-import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/site/ProductCard";
 import { productsQuery, categoriesQuery } from "@/lib/catalog";
 import { brl, SHIPPING_FLAT } from "@/lib/store";
@@ -37,9 +36,7 @@ function Index() {
         <div className="container-x relative col-start-1 row-start-1 self-center py-6 md:py-36">
           <div className="max-w-xl animate-rise">
             <HomeHeroText />
-            <Button asChild variant="buy" size="xl" className="mt-8">
-              <Link to="/produtos">Explorar produtos <ArrowRight /></Link>
-            </Button>
+
           </div>
         </div>
       </section></HomeImages>

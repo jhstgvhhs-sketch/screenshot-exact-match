@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { productHead } from "@/lib/seo";
 import { createFileRoute, useNavigate, notFound } from "@tanstack/react-router";
@@ -83,12 +84,16 @@ function ProdutoContent() {
           ))}
         </dl>}
         {!simpleProduct && <div>
-          <p className="mb-2 text-sm font-semibold">{p.categories?.slug === "filamentos" ? "Cor" : "Modelo"}: {v?.color ?? "selecione"}</p>
+          <p aria-live="polite" className="mb-2 text-sm font-semibold">{p.categories?.slug === "filamentos" ? "Cor" : "Modelo"}: {v?.color ?? "selecione"}</p>
           <div className="flex flex-wrap gap-2">
             {p.product_variants.map((x) => (
               <button key={x.id} onClick={() => { setVid(x.id); setGalleryImage(null); setQty(1); void nav({ to: "/produto/$slug", params: { slug }, search: { cor: x.id }, replace: true, resetScroll: false }); }} title={x.color} aria-label={x.color}
-                aria-pressed={selectedVariantId === x.id} className={`size-11 rounded-full border-2 ${selectedVariantId === x.id ? "border-primary" : "border-border"}`}
-                style={{ background: x.color_hex ?? undefined }} />
+                aria-pressed={selectedVariantId === x.id} className={`group relative flex w-14 flex-col items-center gap-1 rounded-lg p-1 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedVariantId === x.id ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted"}`}>
+                <span aria-hidden="true" className="relative block size-11 shrink-0 rounded-full border-2 border-white/30" style={{ background: x.color_hex ?? undefined }}>
+                  {selectedVariantId === x.id && <Check className="absolute -bottom-1 -right-1 size-5 rounded-full bg-[#FF6A00] p-0.5 text-black" />}
+                </span>
+                <span className="line-clamp-2 min-h-7 w-full break-words text-[10px] leading-tight">{x.color}</span>
+              </button>
             ))}
           </div>
           {v && <p className="mt-2 text-sm text-muted-foreground">{v.stock > 0 ? "Disponível" : /filamento/i.test(p.name) ? "Sob encomenda" : "Indisponível"}</p>}

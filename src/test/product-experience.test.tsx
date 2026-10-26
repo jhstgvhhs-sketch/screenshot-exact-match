@@ -9,6 +9,7 @@ const m = vi.hoisted(() => ({
     name: "Filamento PLA",
     slug: "pla",
     brand: "MasterPrint",
+    categories: { name: "Filamentos", slug: "filamentos" },
     material: "PLA",
     weight: "1 kg",
     diameter: "1,75 mm",
@@ -42,7 +43,9 @@ afterEach(() => {
 describe("Product gallery and purchase preservation", () => {
   it("changes the photo with the selected color and preserves the correct variant in the cart", () => {
     render(<ProdutoPage />);
+    expect(screen.getByLabelText("Preto")).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(screen.getByLabelText("Preto"));
+    expect(screen.getByLabelText("Preto")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByAltText("Filamento PLA — Preto")).toHaveAttribute(
       "src",
       m.product.images[1],
@@ -73,5 +76,26 @@ describe("Product gallery and purchase preservation", () => {
       "src",
       m.product.images[1],
     );
+  });
+  it("preserves the automatic variant for simple accessories without showing color choices", () => {
+    const original = structuredClone(m.product);
+    Object.assign(m.product, {
+      name: "Acessório de teste",
+      material: "",
+      weight: "",
+      diameter: "",
+      categories: { name: "Acessórios", slug: "acessorios" },
+      product_variants: [{ ...m.product.product_variants[0], color: "Padrão", stock: 5 }],
+    });
+    try {
+      render(<ProdutoPage />);
+      expect(screen.queryByRole("button", { name: "Padrão" })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText("Adicionar ao carrinho"));
+      expect(m.add).toHaveBeenCalledWith(
+        expect.objectContaining({ variantId: "v", color: "Padrão", quantity: 1 }),
+      );
+    } finally {
+      Object.assign(m.product, original);
+    }
   });
 });

@@ -44,7 +44,7 @@ function Carrinho() {
             {eligibleForFreePixShipping && <div className="flex justify-between text-green-600"><span>Desconto no frete (Pix)</span><span>-{brl(FIXED_SHIPPING_BRL)}</span></div>}
             <div className="flex justify-between border-t border-border pt-2 text-lg font-bold"><span>Total no Pix</span><span>{brl(subtotal + (eligibleForFreePixShipping ? 0 : FIXED_SHIPPING_BRL))}</span></div>
             {eligibleForFreePixShipping && <p className="text-xs text-muted-foreground">No cartão, o total será {brl(subtotal + FIXED_SHIPPING_BRL)} (frete de {brl(FIXED_SHIPPING_BRL)}).</p>}
-            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix. O valor final depende da forma de pagamento escolhida no checkout.</p><p className="pt-2 text-xs text-muted-foreground">Pagamentos ainda não ativados; nenhuma cobrança será realizada.</p>
+            <Link to="/checkout" className="mt-4 block rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:opacity-90">Prosseguir para checkout</Link><p className="pt-2 text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix. O valor final depende da forma de pagamento escolhida no checkout.</p>
           </aside>
         </div>
       )}

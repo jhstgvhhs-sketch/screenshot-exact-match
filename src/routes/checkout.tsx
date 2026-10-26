@@ -25,6 +25,7 @@ type Payment = "pix" | "card";
 
 export function Checkout() {
   const { items, subtotal, replace } = useCart();
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [kit, setKit] = useState(EMPTY_KIT);
   const [payment, setPayment] = useState<Payment>("pix");
   const [cardShippingConfirmed, setCardShippingConfirmed] = useState(false);
@@ -109,7 +110,7 @@ export function Checkout() {
   if (!items.length) return <section className="container-x py-12"><h1 className="text-3xl font-bold">Finalizar compra</h1><p className="mt-4 text-muted-foreground">Seu carrinho está vazio.</p><Link className="mt-5 inline-block text-primary underline" to="/produtos">Explorar produtos</Link></section>;
 
   const shipping = shippingForOrder(subtotal, payment === "pix" ? "pix" : "card");
-  const fieldClass = "w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+  const fieldClass = "w-full rounded-lg border border-input bg-background px-3 py-2 text-base text-foreground sm:text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   return <section className="container-x py-10">
     <h1 className="text-3xl font-bold">{step === "details" ? "Dados de entrega" : "Pagamento"}</h1>
     <p className="mt-2 text-sm text-muted-foreground">{step === "details" ? "Etapa 1 de 2 — Informe seus dados para continuar ao pagamento." : "Etapa 2 de 2 — Escolha a forma de pagamento. Nenhuma cobrança será feita automaticamente."}</p>
@@ -160,13 +161,15 @@ export function Checkout() {
         {validated && whatsappUrl && payment === "card" && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
         <button type="button" disabled={!!pixData || !!cardOrderId} onClick={() => { setStep("details"); setValidated(false); setWhatsappUrl(null); }} className="text-sm font-semibold text-primary underline">Voltar aos dados de entrega</button>
       </div>
-      <aside className="order-first h-fit lg:order-none space-y-4 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-24">
-        <h2 className="text-lg font-bold">Resumo do pedido</h2>
-        <ul className="space-y-3 text-sm">{items.map(item => <li key={item.variantId} className="flex justify-between gap-3"><span>{item.name} — {item.color} × {item.quantity}</span><span className="shrink-0">{brl(item.price * item.quantity)}</span></li>)}</ul>
-        <ConservationCoupon items={items} disabled={pixLoading || cardLoading || !!pixData || !!cardOrderId} onChange={setKit}/>
-        <OrderGifts value={kit.gifts}/>
-        <p className="text-xs text-muted-foreground">Frete grátis acima de R$ 600,00 exclusivamente no Pix.</p><div className="space-y-2 border-t border-border pt-3 text-sm"><div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div><div className="flex justify-between"><span>{shipping === 0 ? "Frete grátis no Pix" : "Frete fixo"}</span><span>{brl(shipping)}</span></div><div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span>Total</span><span>{brl(subtotal + shipping)}</span></div></div>
-        <Link to="/carrinho" className="block rounded-lg border border-primary/40 px-4 py-3 text-center text-sm font-semibold text-primary hover:bg-primary/10">Voltar ao carrinho</Link>
+      <aside className="order-first flex min-w-0 h-fit flex-col gap-4 lg:order-none rounded-xl border border-border bg-card p-5 lg:sticky lg:top-24">
+        <h2 className="order-0 text-lg font-bold">Resumo do pedido</h2>
+        <button type="button" aria-expanded={summaryOpen} aria-controls="checkout-product-summary" onClick={() => setSummaryOpen(!summaryOpen)} className="order-1 min-h-11 rounded-lg border border-border px-3 py-2 text-left text-sm font-semibold text-primary lg:hidden">{summaryOpen ? "Ocultar produtos do pedido" : "Ver produtos do pedido"}</button>
+        <div id="checkout-product-summary" className={`order-3 lg:order-1 ${summaryOpen ? "" : "hidden lg:block"}`}>
+        <ul className="space-y-3 text-sm">{items.map(item => <li key={item.variantId} className="flex justify-between gap-3"><span className="min-w-0 break-words">{item.name} — {item.color} × {item.quantity}</span><span className="shrink-0">{brl(item.price * item.quantity)}</span></li>)}</ul></div>
+        <div className="order-4 lg:order-2"><ConservationCoupon items={items} disabled={pixLoading || cardLoading || !!pixData || !!cardOrderId} onChange={setKit}/></div>
+        <div className="order-5 lg:order-3"><OrderGifts value={kit.gifts}/></div>
+        <p className="order-6 text-xs text-muted-foreground lg:order-4">Frete grátis acima de R$ 600,00 exclusivamente no Pix.</p><div className="order-2 space-y-2 border-t border-border pt-3 text-sm lg:order-5"><div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div><div className="flex justify-between"><span>{shipping === 0 ? "Frete grátis no Pix" : "Frete fixo"}</span><span>{brl(shipping)}</span></div><div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span>Total</span><span>{brl(subtotal + shipping)}</span></div></div>
+        <Link to="/carrinho" className="order-7 block rounded-lg border border-primary/40 px-4 py-3 text-center text-sm font-semibold text-primary hover:bg-primary/10">Voltar ao carrinho</Link>
       </aside>
     </div>
   </section>;

@@ -89,7 +89,33 @@ describe("Existing catalog editors", () => {
     expect(m.deletes).not.toHaveBeenCalled();
   });
   it("creates an inactive product with explicit material and keeps initial stock per color", async () => {
-    wrap(<NewProductForm categories={[]} onSaved={() => {}} />);
+    wrap(
+      <NewProductForm
+        categories={[
+          {
+            id: "category-filaments",
+            name: "Filamentos",
+            slug: "filamentos",
+            sort: 0,
+            description: null,
+          },
+        ]}
+        onSaved={() => {}}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Categoria"), {
+      target: { value: "category-filaments" },
+    });
+    fireEvent.change(screen.getByLabelText("Nome"), {
+      target: { value: "Filamento PLA de teste" },
+    });
+    fireEvent.change(screen.getByLabelText("Identificador (URL)"), {
+      target: { value: "filamento-pla-teste" },
+    });
+    fireEvent.change(screen.getByLabelText("Preço (R$)"), { target: { value: "59,90" } });
+    fireEvent.change(screen.getByLabelText("Cores (uma por linha)"), {
+      target: { value: "Preto\nBranco" },
+    });
     fireEvent.change(screen.getByLabelText("Material"), { target: { value: "PLA" } });
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar produto como inativo" }));
     await waitFor(() =>
