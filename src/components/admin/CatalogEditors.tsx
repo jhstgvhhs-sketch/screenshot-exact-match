@@ -265,7 +265,7 @@ export function CatalogEditFields({
   return (
     <form onSubmit={save} className="mt-5 space-y-4 border-t border-border pt-5">
       <div className="grid gap-3 sm:grid-cols-2">
-        {(["name", "slug", "brand", ...(simpleProduct ? [] : ["material", "weight", "diameter"]), "price"] as (keyof typeof fields)[]).map(
+        {(["name", "slug", "brand", ...(simpleProduct ? [] : ["material", "weight", "diameter"]), "price"] as Exclude<keyof typeof fields, "description">[]).map(
           (key) => (
             <label key={key} className="text-sm font-semibold">
               {

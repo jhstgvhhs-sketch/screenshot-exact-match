@@ -13,6 +13,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     let revision = 0;
+    let identity: string | null | undefined;
     const load = async (u: User | null, expected: number) => {
       if (!active || expected !== revision) return;
       let authorized = false;
@@ -38,13 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         event === "SIGNED_IN" ||
         event === "SIGNED_OUT" ||
         event === "USER_UPDATED" ||
-        event === "INITIAL_SESSION"
+        event === "INITIAL_SESSION" ||
+        event === "TOKEN_REFRESHED"
       ) {
         const expected = ++revision;
-        const nextUser = session?.user ?? null;
-        // Never carry a previous account's administrative flag into another session.
-        setIsAdmin(false);
-        setLoading(true);
+        const nextUser = event === "SIGNED_OUT" ? null : (session?.user ?? null);
+        const nextIdentity = nextUser?.id ?? null;
+        // Repeated sign-in/refresh events for the same account must not unmount forms.
+        // Still check the role on the server; clear privileges immediately on account changes.
+        if (identity !== nextIdentity) {
+          setIsAdmin(false);
+          setLoading(true);
+        }
+        identity = nextIdentity;
         setUser(nextUser);
         setTimeout(() => void load(nextUser, expected), 0);
       }

@@ -84,7 +84,7 @@ describe("Existing catalog editors", () => {
   });
   it("refuses to delete a color already linked to an order", async () => {
     wrap(<ProductEditor product={product} initiallyEditing onSaved={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Excluir somente a cor Preto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir somente a opção Preto" }));
     expect(await screen.findByText(/vinculada a um pedido/)).toBeInTheDocument();
     expect(m.deletes).not.toHaveBeenCalled();
   });
