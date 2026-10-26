@@ -26,7 +26,7 @@ const labels: { key: Exclude<keyof StoreSettings, "homepage_images">; label: str
  { key: "business_name", label: "Nome comercial" },
  { key: "legal_name", label: "Razão social" },
  { key: "cnpj", label: "CNPJ", placeholder: "00.000.000/0000-00" },
- { key: "whatsapp", label: "WhatsApp (com DDD)", placeholder: "71999999999" },
+ { key: "whatsapp", label: "WhatsApp do checkout (cartão) e atendimento", placeholder: "71999999999" },
  { key: "phone", label: "Telefone" },
  { key: "email", label: "E-mail comercial" },
  { key: "address", label: "Endereço comercial completo" },
@@ -66,6 +66,8 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
    if (!window.confirm("Confirmar as alterações dos dados da loja? As informações salvas aparecerão no site.")) return;
    setBusy(true); setMessage("");
    try {
+     const contactDigits = fields.whatsapp.replace(/\D/g, "");
+     if (contactDigits && !/^(?:\d{10,11}|55\d{10,11})$/.test(contactDigits)) throw new Error("Informe um WhatsApp válido com DDD (ex.: 71999999999).");
      for (const url of [fields.logo_url, fields.banner_url]) if (url.trim() && !/^https:\/\//i.test(url.trim())) throw new Error("As imagens precisam usar URLs HTTPS.");
      const { id, homepage_images: _homepageImages, ...values } = fields;
      const { data, error } = await settingsTable().upsert({ id: "main", ...values }, { onConflict: "id" }).select("id").single();
@@ -79,6 +81,7 @@ function StoreSettingsForm({ current, onSaved }: { current: StoreSettings; onSav
  return <form onSubmit={save} className="mt-10 space-y-5 rounded-xl border border-border bg-card p-5">
    <h2 className="text-xl font-bold">Dados da loja</h2>
    <p className="text-sm text-muted-foreground">Atualize as informações que aparecem no rodapé. Campos vazios não serão publicados. Não use dados de outra empresa.</p>
+   <p className="text-sm text-muted-foreground">O campo WhatsApp do checkout define para qual número o cliente será direcionado ao escolher cartão de crédito. O mesmo número aparece no rodapé. Informe DDD e número; o código 55 é opcional. A alteração passa a valer após salvar, sem nova publicação. Se estiver vazio, será usada a configuração anterior do ambiente, caso exista.</p>
    <div className="grid gap-4 md:grid-cols-2">
     {labels.map(({ key,label,placeholder }) => <label key={key} className="block text-sm font-semibold">{label}
       <input type={key === "email" ? "email" : "text"} placeholder={placeholder} value={fields[key]} onChange={e => set(key,e.target.value)} className="mt-2 w-full rounded-lg border border-input bg-background p-3" />
