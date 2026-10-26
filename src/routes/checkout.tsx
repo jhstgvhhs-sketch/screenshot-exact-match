@@ -74,7 +74,11 @@ export function Checkout() {
       const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
       if (customer.email?.toLowerCase() !== user.email?.toLowerCase())
         throw new Error("Utilize no pedido o mesmo e-mail da sua conta.");
-      const cardLink = cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts);
+      // Read the current public store contact before creating the order, so ADM changes apply without a new build.
+      const { data: storeContact, error: contactError } = await (supabase as unknown as { from: (table: string) => any })
+        .from("store_settings").select("whatsapp").eq("id", "main").maybeSingle();
+      if (contactError) throw new Error("Não foi possível consultar o WhatsApp da loja. Tente novamente.");
+      const cardLink = cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts, storeContact?.whatsapp ?? undefined);
       if (!cardLink) throw new Error("O atendimento para cartão está indisponível. Consulte os canais de contato da loja ou escolha Pix.");
       const { data, error } = await supabase.rpc("place_order", {
         _items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })),
