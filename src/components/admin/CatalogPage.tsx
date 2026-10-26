@@ -1,3 +1,4 @@
+import { DeleteProductButton } from "./DeleteProductButton";
 import { LowStockSettings, lowStockQuery } from "./LowStockSettings";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -167,6 +168,14 @@ export function CatalogPage({
                       >
                         {selected === p.id ? "Fechar" : "Editar"}
                       </button>
+                      <DeleteProductButton
+                        product={p}
+                        onDeleted={() => {
+                          if (selected === p.id) setSelected(null);
+                          if (page > 0 && query.data.rows.length === 1) setPage(page - 1);
+                          refresh();
+                        }}
+                      />
                     </td>
                   </tr>
                 ))}
