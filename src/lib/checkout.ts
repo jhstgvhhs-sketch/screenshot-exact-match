@@ -4,9 +4,15 @@ import { brl } from "./store";
 import { FIXED_SHIPPING_BRL } from "./shipping";
 
 // Public contact number only. Blackcat credentials must never be configured here.
-export function cardWhatsAppUrl(items: CartItem[] = [], subtotal = 0, data?: FormData, gifts: GiftItem[] = []): string | null {
-  const phone = (import.meta.env["VITE_CHECKOUT_WHATSAPP_NUMBER"] ?? "").replace(/\D/g, "");
-  if (!/^55\d{10,11}$/.test(phone)) return null;
+export function normalizeCheckoutWhatsApp(value: string): string | null {
+  const digits = value.replace(/\D/g, "");
+  const phone = /^\d{10,11}$/.test(digits) ? `55${digits}` : digits;
+  return /^55\d{10,11}$/.test(phone) ? phone : null;
+}
+
+export function cardWhatsAppUrl(items: CartItem[] = [], subtotal = 0, data?: FormData, gifts: GiftItem[] = [], configuredPhone?: string): string | null {
+  const phone = normalizeCheckoutWhatsApp(configuredPhone ?? (import.meta.env["VITE_CHECKOUT_WHATSAPP_NUMBER"] ?? ""));
+  if (!phone) return null;
   const field = (name: string) => String(data?.get(name) ?? "").trim();
   const message = [
     "Olá! Quero finalizar minha compra na 3DFLEX por cartão.",
