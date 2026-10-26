@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 const cats = [
   { label: "PLA", slug: "pla" },
   { label: "PETG", slug: "petg" },
+  { label: "Impressoras", slug: "impressoras" },
   { label: "Acessórios", slug: "acessorios" },
 ];
 
@@ -46,7 +47,7 @@ export function Header() {
           <label className="relative block">
             <span className="sr-only">Pesquisar produtos</span>
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar filamentos, cores..." className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:border-primary" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produtos, marcas, modelos..." className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:border-primary" />
           </label>
         </form>
         <div className="ml-auto flex items-center gap-1 md:ml-2">
