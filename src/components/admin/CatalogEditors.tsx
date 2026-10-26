@@ -65,6 +65,7 @@ export function CatalogEditFields({
   const { data: categories = [] } = useQuery(categoriesQuery());
   const [categoryId, setCategoryId] = useState(product.category_id ?? "");
   const variants = [...product.product_variants].sort((a, b) => a.sort - b.sort);
+  const simpleProduct = variants.length === 1 && variants[0].color === "Padrão";
   const [fields, setFields] = useState({
     name: product.name,
     slug: product.slug,
@@ -129,13 +130,13 @@ export function CatalogEditFields({
           !Number.isSafeInteger(Number(variantFields[v.id].stock)),
       )
     ) {
-      setFeedback("Cada cor precisa de nome, SKU e estoque inteiro válido.");
+      setFeedback("Cada opção precisa de nome, SKU e estoque inteiro válido.");
       return;
     }
     const colorNames = variants.map((v) => variantFields[v.id].color.trim().toLowerCase());
     const skus = variants.map((v) => variantFields[v.id].sku.trim().toLowerCase());
     if (new Set(colorNames).size !== colorNames.length || new Set(skus).size !== skus.length) {
-      setFeedback("Cores e SKUs não podem ser repetidos neste produto.");
+      setFeedback("Opções e SKUs não podem ser repetidos neste produto.");
       return;
     }
     const validImage = (s: string) => {
@@ -210,7 +211,7 @@ export function CatalogEditFields({
   async function removeVariant(v: EditableProduct["product_variants"][number], index: number) {
     if (saving || uploading) return;
     if (variants.length <= 1) {
-      setFeedback("Não é possível excluir a última cor. Mantenha pelo menos uma variante.");
+      setFeedback("Não é possível excluir a última opção de compra.");
       return;
     }
     if (
@@ -264,7 +265,7 @@ export function CatalogEditFields({
   return (
     <form onSubmit={save} className="mt-5 space-y-4 border-t border-border pt-5">
       <div className="grid gap-3 sm:grid-cols-2">
-        {(["name", "slug", "brand", "material", "weight", "diameter", "price"] as const).map(
+        {(["name", "slug", "brand", ...(simpleProduct ? [] : ["material", "weight", "diameter"]), "price"] as (keyof typeof fields)[]).map(
           (key) => (
             <label key={key} className="text-sm font-semibold">
               {
@@ -320,7 +321,7 @@ export function CatalogEditFields({
         disabled={saving || uploading}
         onUploadingChange={setUploading}
       />
-      <h4 className="font-semibold">Editar cores, estoque e fotos</h4>
+      <h4 className="font-semibold">Editar opções, estoque e fotos</h4>
       <p className="text-xs text-muted-foreground">
         As cores existentes são editadas no próprio registro, sem excluir variantes. A imagem de
         cada cor segue a ordem original das variantes.
@@ -329,15 +330,15 @@ export function CatalogEditFields({
         {variants.map((v, i) => (
           <div key={v.id} className="rounded-lg border border-border p-3">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <span className="font-semibold">{v.color}</span>
+              <span className="font-semibold">{simpleProduct ? "Produto simples" : v.color}</span>
               <button
                 type="button"
                 disabled={saving || uploading || variants.length <= 1}
                 onClick={() => void removeVariant(v, i)}
                 className="rounded-lg border border-destructive px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50"
-                aria-label={`Excluir somente a cor ${v.color}`}
+                aria-label={`Excluir somente a opção ${v.color}`}
               >
-                Excluir esta cor
+                Excluir esta opção
               </button>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -345,7 +346,7 @@ export function CatalogEditFields({
                 <label key={key} className="text-xs font-semibold">
                   {
                     {
-                      color: "Nome da cor",
+                      color: simpleProduct ? "Opção" : "Nome da cor",
                       sku: "SKU",
                       stock: "Estoque",
                       color_hex: "Cor hexadecimal (opcional)",
@@ -360,7 +361,7 @@ export function CatalogEditFields({
               ))}
             </div>
             <ProductImageField
-              label={`Foto da cor ${v.color}`}
+              label={`Foto da opção ${v.color}`}
               value={images[i + 1]}
               onChange={(url) => setImage(i + 1, url)}
               disabled={saving || uploading}
