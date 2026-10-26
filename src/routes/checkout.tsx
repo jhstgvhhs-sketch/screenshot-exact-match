@@ -78,7 +78,7 @@ export function Checkout() {
       const { data: storeContact, error: contactError } = await (supabase as unknown as { from: (table: string) => any })
         .from("store_settings").select("whatsapp").eq("id", "main").maybeSingle();
       if (contactError) throw new Error("Não foi possível consultar o WhatsApp da loja. Tente novamente.");
-      const cardLink = cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts, storeContact?.whatsapp ?? undefined);
+      const cardLink = cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts, storeContact?.whatsapp?.trim() || undefined);
       if (!cardLink) throw new Error("O atendimento para cartão está indisponível. Consulte os canais de contato da loja ou escolha Pix.");
       const { data, error } = await supabase.rpc("place_order", {
         _items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })),
