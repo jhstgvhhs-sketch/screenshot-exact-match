@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
-type Review = { id: string; product_id: string; author_name: string; rating: number; comment: string; approved: boolean; created_at: string; source?: string };
+type Review = { id: string; product_id: string | null; author_name: string; rating: number; comment: string; approved: boolean; created_at: string; source?: string };
 const reviewsTable = () => (supabase as unknown as { from: (name: string) => any }).from("product_reviews");
 
 export function ProductReviews({ productId }: { productId: string }) {
@@ -61,10 +61,10 @@ export function AdminAddReview({ products }: { products: { id: string; name: str
   const [message, setMessage] = useState("");
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!productId || author.trim().length < 2 || comment.trim().length < 10) { setMessage("Preencha produto, autor e comentário válido."); return; }
+    if (author.trim().length < 2 || comment.trim().length < 10) { setMessage("Preencha autor e comentário válido."); return; }
     setBusy(true); setMessage("");
     try {
-      const { error } = await reviewsTable().insert({ product_id: productId, author_name: author.trim(), rating, comment: comment.trim(), approved: true, source: "admin" });
+      const { error } = await reviewsTable().insert({ product_id: productId || null, author_name: author.trim(), rating, comment: comment.trim(), approved: true, source: "admin" });
       if (error) throw error;
       setAuthor(""); setComment("");
       setMessage("Feedback cadastrado e identificado como enviado pela loja.");
@@ -76,7 +76,7 @@ export function AdminAddReview({ products }: { products: { id: string; name: str
   return <form onSubmit={submit} className="mt-10 space-y-4 rounded-xl border border-border bg-card p-5">
     <h2 className="text-xl font-bold">Adicionar feedback recebido</h2>
     <p className="text-sm text-muted-foreground">Cadastre apenas depoimentos reais, com autorização do cliente. Eles serão identificados publicamente como cadastrados pela loja, sem selo de compra verificada.</p>
-    <label className="block text-sm">Produto<select required value={productId} onChange={e => setProductId(e.target.value)} className="mt-1 w-full rounded-lg border border-input bg-background p-3"><option value="">Selecione um produto</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+    <label className="block text-sm">Avaliação sobre<select value={productId} onChange={e => setProductId(e.target.value)} className="mt-1 w-full rounded-lg border border-input bg-background p-3"><option value="">Loja 3DFLEX (sem produto específico)</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
     <label className="block text-sm">Nome do cliente (autorizado)<input required minLength={2} maxLength={80} value={author} onChange={e => setAuthor(e.target.value)} className="mt-1 w-full rounded-lg border border-input bg-background p-3"/></label>
     <label className="block text-sm">Nota<select value={rating} onChange={e => setRating(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input bg-background p-3">{[5,4,3,2,1].map(n => <option key={n} value={n}>{n} estrela(s)</option>)}</select></label>
     <label className="block text-sm">Depoimento<textarea required minLength={10} maxLength={1500} rows={4} value={comment} onChange={e => setComment(e.target.value)} className="mt-1 w-full rounded-lg border border-input bg-background p-3"/></label>
@@ -108,7 +108,7 @@ export function ReviewModeration() {
     <h2 className="text-xl font-bold">Feedbacks aguardando aprovação</h2>
     {!pending.length && <p className="mt-3 text-sm text-muted-foreground">Nenhuma avaliação pendente.</p>}
     <div className="mt-4 space-y-3">{pending.map(r => <div key={r.id} className="rounded-lg border border-border p-4">
-      <p className="font-semibold">{r.author_name} — {r.rating}/5</p><p className="mt-2 text-sm">{r.comment}</p>
+      <p className="text-xs text-muted-foreground">{r.product_id ? "Avaliação de produto" : "Avaliação da loja"}</p><p className="font-semibold">{r.author_name} — {r.rating}/5</p><p className="mt-2 text-sm">{r.comment}</p>
       <div className="mt-3 flex gap-3"><button onClick={() => void moderate(r.id,true)} className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground">Aprovar</button><button onClick={() => void moderate(r.id,false)} className="rounded-lg border border-destructive px-4 py-2 text-destructive">Rejeitar</button></div>
     </div>)}</div>
     {message && <p role="status" className="mt-3 text-sm">{message}</p>}

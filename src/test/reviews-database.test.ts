@@ -22,6 +22,15 @@ beforeAll(async () => {
   );
   await db.exec(sql);
   await db.exec(sql);
+  const general = await readFile(
+    new URL(
+      "../../supabase/migrations/20261026132646_store_reviews_without_product.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  await db.exec(general);
+  await db.exec(general);
 }, 30000);
 afterAll(() => db.close());
 describe("Review storage and permissions", () => {
@@ -60,6 +69,38 @@ describe("Review storage and permissions", () => {
       { source: "customer" },
     ]);
     await expect(db.query("delete from product_reviews")).rejects.toThrow(/permission denied/);
+    await db.exec("reset role");
+  });
+  it("accepts store feedback without a product while retaining moderation and product links", async () => {
+    await db.exec(`select set_config('test.uid','${customer}',false);set role authenticated`);
+    await db.query(
+      "insert into product_reviews(product_id,author_name,rating,comment) values(null,'Cliente da loja',5,'Atendimento excelente na loja.')",
+    );
+    await expect(
+      db.query(
+        "insert into product_reviews(product_id,author_name,rating,comment,approved) values(null,'Cliente da loja',5,'Atendimento excelente na loja.',true)",
+      ),
+    ).rejects.toThrow(/row-level security/);
+    await db.exec("reset role;set role anon");
+    expect(
+      (await db.query("select * from product_reviews where product_id is null")).rows,
+    ).toHaveLength(0);
+    await expect(
+      db.query(
+        "insert into product_reviews(product_id,author_name,rating,comment) values(null,'Visitante',5,'Atendimento excelente na loja.')",
+      ),
+    ).rejects.toThrow(/permission denied/);
+    await db.exec(
+      `reset role;select set_config('test.uid','${admin}',false);set role authenticated`,
+    );
+    await db.exec("update product_reviews set approved=true where product_id is null");
+    await db.exec("reset role;set role anon");
+    expect(
+      (await db.query("select * from product_reviews where product_id is null")).rows,
+    ).toHaveLength(1);
+    expect(
+      (await db.query("select * from product_reviews where product_id is not null")).rows,
+    ).toHaveLength(2);
     await db.exec("reset role");
   });
 });

@@ -1,3 +1,4 @@
+import { StoreReviewForm } from "./StoreReviewForm";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -28,7 +29,7 @@ export function SiteReviews() {
         Feedbacks dos clientes
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Veja as avaliações publicadas pelos clientes sobre os produtos da 3DFLEX.
+        Opiniões dos clientes sobre a loja, o atendimento e os produtos da 3DFLEX.
       </p>
       {query.isLoading ? (
         <p className="mt-5 text-sm">Carregando feedbacks…</p>
@@ -77,6 +78,7 @@ export function SiteReviews() {
           )}
         </>
       )}
+      <StoreReviewForm />
     </section>
   );
 }
