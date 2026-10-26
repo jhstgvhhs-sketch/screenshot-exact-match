@@ -59,7 +59,7 @@ export function Footer() {
               <span className="inline-flex items-center gap-2"><ShieldCheck size={20} className="text-primary"/> Privacidade e proteção de dados</span>
               <span className="inline-flex items-center gap-2"><Truck size={20} className="text-primary"/> Envio para todo o Brasil</span>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Não exibimos selos ou certificações de terceiros sem validação.</p>
+            <p className="mt-3 text-xs text-muted-foreground">Consulte nossas políticas, condições de compra e canais de atendimento nos links acima.</p>
           </div>
         </div>
       </div>
