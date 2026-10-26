@@ -415,17 +415,21 @@ export function NewProductForm({
   categories: CategoryItem[];
   onSaved: () => void;
 }) {
-  const [material, setMaterial] = useState("PETG");
-  const [brand, setBrand] = useState("MasterPrint");
-  const [name, setName] = useState("Filamento PETG MasterPrint 1kg — 1,75mm");
-  const [slug, setSlug] = useState("filamento-petg-masterprint-1kg");
-  const [price, setPrice] = useState("69,90");
-  const [description, setDescription] = useState(
-    "Filamento PETG MasterPrint para impressão 3D. Bobina de 1 kg, diâmetro de 1,75 mm.",
-  );
-  const [colors, setColors] = useState(PETG_COLORS.join("\n"));
-  const [imageUrl, setImageUrl] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const category = categories.find(c => c.id === categoryId);
+  const isFilament = category?.slug === "filamentos" || (!categoryId && false);
+  const [material, setMaterial] = useState("PLA");
+  const [brand, setBrand] = useState("");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [colors, setColors] = useState("");
+  const [sku, setSku] = useState("");
+  const [stock, setStock] = useState("1");
+  const [weight, setWeight] = useState("1kg");
+  const [diameter, setDiameter] = useState("1,75mm");
+  const [imageUrl, setImageUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -433,187 +437,88 @@ export function NewProductForm({
     e.preventDefault();
     if (uploading) return;
     const value = Number(price.replace(",", "."));
-    const names = [
-      ...new Set(
-        colors
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean),
-      ),
-    ];
-    if (
-      !name.trim() ||
-      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
-      !/^\d+([.,]\d{1,2})?$/.test(price.trim()) ||
-      value <= 0 ||
-      !names.length
-    ) {
-      setFeedback("Confira nome, identificador, preço e cores.");
+    const names = [...new Set(colors.split("\n").map(s => s.trim()).filter(Boolean))];
+    const validStock = /^\d+$/.test(stock) && Number.isSafeInteger(Number(stock));
+    if (!categoryId || !name.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug.trim()) ||
+        !/^\d+([.,]\d{1,2})?$/.test(price.trim()) || !Number.isFinite(value) || value <= 0 ||
+        (isFilament ? !names.length : (!sku.trim() || !validStock))) {
+      setFeedback("Confira categoria, nome, identificador, preço e " + (isFilament ? "cores." : "SKU e estoque."));
       return;
     }
     setBusy(true);
     setFeedback("");
     try {
-      const { data: existing, error: lookupError } = await supabase
-        .from("products")
-        .select("id")
-        .eq("slug", slug)
-        .maybeSingle();
+      const { data: existing, error: lookupError } = await supabase.from("products").select("id").eq("slug", slug.trim()).maybeSingle();
       if (lookupError) throw lookupError;
       if (existing) throw new Error("Já existe um produto com este identificador.");
-      const { data: product, error } = await supabase
-        .from("products")
-        .insert({
-          name: name.trim(),
-          slug,
-          price: value,
-          brand: brand.trim() || null,
-          material: material.trim() || null,
-          weight: "1kg",
-          diameter: "1,75mm",
-          description: description.trim(),
-          images: imageUrl.trim() ? [imageUrl.trim()] : [],
-          category_id: categoryId || null,
-          active: false,
-          featured: false,
-        })
-        .select("id")
-        .single();
+      const { data: product, error } = await supabase.from("products").insert({
+        name: name.trim(), slug: slug.trim(), price: value, brand: brand.trim() || null,
+        material: isFilament ? material.trim() || null : null,
+        weight: isFilament ? weight.trim() || null : null,
+        diameter: isFilament ? diameter.trim() || null : null,
+        description: description.trim(), images: imageUrl.trim() ? [imageUrl.trim()] : [],
+        category_id: categoryId, active: false, featured: false,
+      }).select("id").single();
       if (error) throw error;
       if (!product) throw new Error("O banco não confirmou o cadastro do produto.");
-      const { error: variantsError } = await supabase.from("product_variants").insert(
-        names.map((color, index) => ({
-          product_id: product.id,
-          color,
-          sku: "MP-PETG-" + product.id.slice(0, 8) + "-" + (index + 1).toString().padStart(2, "0"),
-          stock: 1,
-          sort: index,
-        })),
-      );
-      if (variantsError)
-        throw new Error(
-          "Produto criado como inativo, mas as cores não foram salvas: " + variantsError.message,
-        );
-      setFeedback(
-        "Produto e " +
-          names.length +
-          " cores cadastrados como INATIVOS. A publicação na loja será feita em uma etapa separada.",
-      );
+      const rows = isFilament
+        ? names.map((color, index) => ({
+            product_id: product.id, color,
+            sku: "FIL-" + product.id.slice(0, 8) + "-" + (index + 1).toString().padStart(2, "0"),
+            stock: 1, sort: index,
+          }))
+        : [{ product_id: product.id, color: "Padrão", sku: sku.trim(), stock: Number(stock), sort: 0 }];
+      const { error: variantsError } = await supabase.from("product_variants").insert(rows);
+      if (variantsError) throw new Error("Produto criado como inativo, mas não foi possível salvar a opção de compra: " + variantsError.message);
+      setFeedback("Produto cadastrado como INATIVO. Revise as fotos e publique quando estiver pronto.");
       onSaved();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Não foi possível cadastrar o produto.");
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
+  const inputClass = "mt-2 w-full rounded-lg border border-input bg-background p-3";
   return (
     <form onSubmit={create} className="mt-10 rounded-xl border border-border bg-card p-5">
       <h2 className="text-xl font-bold">Cadastrar novo produto</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Novo produto é criado inativo, para você revisar antes de disponibilizar na loja.
-      </p>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-semibold">
-          Nome
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-          />
-        </label>
-        <label className="text-sm font-semibold">
-          Identificador (URL)
-          <input
-            required
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-          />
-        </label>
-        <label className="text-sm font-semibold">
-          Preço (R$)
-          <input
-            required
-            inputMode="decimal"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-          />
-        </label>
-        <ProductImageField
-          label="Foto principal (opcional)"
-          value={imageUrl}
-          onChange={setImageUrl}
-          disabled={busy || uploading}
-          onUploadingChange={setUploading}
-        />
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-semibold">
-          Material
-          <input
-            value={material}
-            onChange={(e) => setMaterial(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-          />
-        </label>
-        <label className="text-sm font-semibold">
-          Marca
-          <input
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-          />
-        </label>
-      </div>
-      <label className="mt-4 block text-sm font-semibold">
-        Categoria
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-        >
-          <option value="">Sem categoria</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
+      <p className="mt-2 text-sm text-muted-foreground">Cadastre filamentos, impressoras, acessórios e outros produtos. O produto começa inativo para revisão.</p>
+      <label className="mt-5 block text-sm font-semibold">Categoria
+        <select required value={categoryId} onChange={e => setCategoryId(e.target.value)} className={inputClass}>
+          <option value="">Selecione uma categoria</option>
+          {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
         </select>
       </label>
-      <label className="mt-4 block text-sm font-semibold">
-        Descrição
-        <textarea
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-        />
+      {!categories.length && <p role="alert" className="mt-2 text-sm text-primary">Cadastre uma categoria na administração antes de adicionar produtos.</p>}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label className="text-sm font-semibold">Nome<input required value={name} onChange={e => setName(e.target.value)} className={inputClass} /></label>
+        <label className="text-sm font-semibold">Identificador (URL)<input required value={slug} onChange={e => setSlug(e.target.value)} placeholder="exemplo-impressora-3d" className={inputClass} /></label>
+        <label className="text-sm font-semibold">Preço (R$)<input required inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} className={inputClass} /></label>
+        <label className="text-sm font-semibold">Marca<input value={brand} onChange={e => setBrand(e.target.value)} className={inputClass} /></label>
+        <ProductImageField label="Foto principal (opcional)" value={imageUrl} onChange={setImageUrl} disabled={busy || uploading} onUploadingChange={setUploading} />
+      </div>
+      <label className="mt-4 block text-sm font-semibold">Descrição e especificações técnicas
+        <textarea rows={4} value={description} onChange={e => setDescription(e.target.value)} className={inputClass} />
       </label>
-      <label className="mt-4 block text-sm font-semibold">
-        Cores (uma por linha)
-        <textarea
-          required
-          rows={9}
-          value={colors}
-          onChange={(e) => setColors(e.target.value)}
-          className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-        />
-      </label>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Estoque inicial: 1 unidade por cor. Não inclui bobina de 5 kg.
-      </p>
-      {feedback && (
-        <p role="status" className="mt-4 text-sm">
-          {feedback}
-        </p>
+      {isFilament ? (
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="text-sm font-semibold">Material<input value={material} onChange={e => setMaterial(e.target.value)} className={inputClass} /></label>
+            <label className="text-sm font-semibold">Peso<input value={weight} onChange={e => setWeight(e.target.value)} className={inputClass} /></label>
+            <label className="text-sm font-semibold">Diâmetro<input value={diameter} onChange={e => setDiameter(e.target.value)} className={inputClass} /></label>
+          </div>
+          <label className="block text-sm font-semibold">Cores (uma por linha)
+            <textarea required rows={7} value={colors} onChange={e => setColors(e.target.value)} className={inputClass} />
+          </label>
+          <p className="text-xs text-muted-foreground">Estoque inicial: 1 unidade por cor. Você pode editar o estoque após cadastrar.</p>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm font-semibold">SKU do produto<input required value={sku} onChange={e => setSku(e.target.value)} className={inputClass} /></label>
+          <label className="text-sm font-semibold">Estoque inicial<input required type="number" min={0} step={1} value={stock} onChange={e => setStock(e.target.value)} className={inputClass} /></label>
+          <p className="text-xs text-muted-foreground sm:col-span-2">Produto simples: não exige cores. Caso tenha modelos diferentes, você poderá adicionar opções após o cadastro.</p>
+        </div>
       )}
-      <button
-        disabled={busy || uploading}
-        type="submit"
-        className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50"
-      >
+      {feedback && <p role="status" className="mt-4 text-sm">{feedback}</p>}
+      <button disabled={busy || uploading || !categoryId} type="submit" className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">
         {busy ? "Cadastrando..." : "Cadastrar produto como inativo"}
       </button>
     </form>
