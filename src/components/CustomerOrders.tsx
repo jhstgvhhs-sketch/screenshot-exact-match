@@ -4,7 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { brl } from "@/lib/store";
-import { trackingUrl, missingTrackingColumns } from "@/lib/tracking";
+import { OrderDocumentsContact } from "@/components/OrderDocumentsContact";
+import { missingTrackingColumns } from "@/lib/tracking";
 const orderStatus: Record<string, string> = {
   pending: "Pendente",
   aguardando_pagamento: "Aguardando pagamento",
@@ -45,9 +46,12 @@ export function CustomerOrders({ userId }: { userId: string }) {
         // Preserve existing order history during a staged migration, without masking permission errors.
         const legacy = await supabase
           .from("orders")
-          .select("id,gift_items,created_at,status,payment_status,total,tracking_code,ship_city,ship_state", {
-            count: "exact",
-          })
+          .select(
+            "id,gift_items,created_at,status,payment_status,total,tracking_code,ship_city,ship_state",
+            {
+              count: "exact",
+            },
+          )
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .order("id")
@@ -86,12 +90,6 @@ export function CustomerOrders({ userId }: { userId: string }) {
         </div>
       ) : (
         query.data?.rows.map((o) => {
-          let url = "";
-          try {
-            url = trackingUrl(o.tracking_url ?? "");
-          } catch {
-            /* Never expose unsafe stored links. */
-          }
           return (
             <article key={o.id} className="rounded-xl border border-border bg-card p-5">
               <p className="font-bold">Pedido {o.id.slice(0, 8).toUpperCase()}</p>
@@ -108,30 +106,11 @@ export function CustomerOrders({ userId }: { userId: string }) {
                 Status: {orderStatus[o.status] ?? o.status} · Pagamento:{" "}
                 {payments[o.payment_status] ?? o.payment_status}
               </p>
-              <OrderGifts value={o.gift_items}/>
-              {o.tracking_carrier && (
-                <p className="mt-3 text-sm">Transportadora: {o.tracking_carrier}</p>
-              )}
-              {o.tracking_code && (
-                <p className="mt-2 break-all text-sm">Código de rastreamento: {o.tracking_code}</p>
-              )}
-              {url ? (
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground"
-                >
-                  RASTREAR PEDIDO
-                </a>
+              <OrderGifts value={o.gift_items} />
+              {["cancelled", "cancelado"].includes(o.status) ? (
+                <p className="mt-3 text-sm text-muted-foreground">Pedido cancelado.</p>
               ) : (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {["cancelled", "cancelado"].includes(o.status)
-                    ? "Pedido cancelado."
-                    : o.tracking_code
-                      ? "O link oficial de rastreamento ainda não foi informado."
-                      : "Seu pedido está sendo preparado. As informações de rastreamento aparecerão após o envio."}
-                </p>
+                <OrderDocumentsContact orderId={o.id} />
               )}
             </article>
           );

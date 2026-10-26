@@ -7,10 +7,14 @@ const m = vi.hoisted(() => ({
   rows: [] as any[],
   fail: false,
   missingNew: false,
+  whatsapp: "71999999999",
 }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: m.from } }));
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+}));
+vi.mock("@/components/site/StoreSettings", () => ({
+  useStoreSettings: () => ({ data: { whatsapp: m.whatsapp }, isPending: false, isError: false }),
 }));
 import { CustomerOrders } from "@/components/CustomerOrders";
 let client: QueryClient;
@@ -29,6 +33,7 @@ const order = {
 beforeEach(() => {
   vi.clearAllMocks();
   m.rows = [order];
+  m.whatsapp = "71999999999";
   m.fail = false;
   m.missingNew = false;
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -71,37 +76,45 @@ describe("Customer tracking", () => {
   it("preserves order history when the additive tracking columns are not migrated yet", async () => {
     m.missingNew = true;
     show();
-    expect(await screen.findByText("Código de rastreamento: ABC123")).toBeInTheDocument();
+    expect(await screen.findByText("Nota fiscal e rastreamento")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(
       m.eq.mock.calls.every((call) => call[0] !== "user_id" || call[1] === "current-customer"),
     ).toBe(true);
   });
-  it("requests only the logged-in customer orders and renders saved carrier, code and official link", async () => {
+  it("keeps customer ownership and prepares the request using the store WhatsApp", async () => {
     show();
-    expect(await screen.findByText("Transportadora: Transportadora teste")).toBeInTheDocument();
-    expect(screen.getByText("Código de rastreamento: ABC123")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "RASTREAR PEDIDO" })).toHaveAttribute(
-      "href",
-      order.tracking_url,
-    );
+    const link = await screen.findByRole("link", {
+      name: "Solicitar nota e rastreio pelo WhatsApp",
+    });
+    const url = new URL(link.getAttribute("href")!);
+    expect(url.origin + url.pathname).toBe("https://wa.me/5571999999999");
+    expect(url.searchParams.get("text")).toContain("pedido #11111111");
+    expect(url.searchParams.get("text")).toContain("comprovante de pagamento");
     expect(m.eq).toHaveBeenCalledWith("user_id", "current-customer");
+    expect(screen.queryByText("Código de rastreamento: ABC123")).not.toBeInTheDocument();
   });
-  it("shows the preparation message if tracking is absent", async () => {
+  it("offers the WhatsApp request even before tracking is registered", async () => {
     m.rows = [{ ...order, tracking_carrier: null, tracking_code: null, tracking_url: null }];
     show();
     expect(
-      await screen.findByText(
-        "Seu pedido está sendo preparado. As informações de rastreamento aparecerão após o envio.",
-      ),
+      await screen.findByRole("link", { name: "Solicitar nota e rastreio pelo WhatsApp" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "RASTREAR PEDIDO" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Abrir o WhatsApp não envia/)).toBeInTheDocument();
   });
-  it("refuses unsafe persisted tracking links", async () => {
-    m.rows = [{ ...order, tracking_url: "javascript:alert(1)" }];
+  it("does not generate a link to an unconfigured or invalid store number", async () => {
+    m.whatsapp = "invalid";
     show();
-    await screen.findByText("Código de rastreamento: ABC123");
-    expect(screen.queryByRole("link", { name: "RASTREAR PEDIDO" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(/WhatsApp de atendimento ainda não está disponível/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Solicitar nota/ })).not.toBeInTheDocument();
+  });
+  it("does not request a receipt for a cancelled order", async () => {
+    m.rows = [{ ...order, status: "cancelado" }];
+    show();
+    expect(await screen.findByText("Pedido cancelado.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Solicitar nota/ })).not.toBeInTheDocument();
   });
   it("provides retry on query failure instead of showing an empty history", async () => {
     m.fail = true;
