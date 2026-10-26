@@ -445,20 +445,20 @@ export function NewProductForm({
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (uploading) return;
-    const normalizedPrice = price.trim().replace(/^R\\$\\s*/, "").replace(/\\s/g, "");
+    const normalizedPrice = price.trim().replace(/^R\$\s*/, "").replace(/\s/g, "");
     const parsedPrice = normalizedPrice.includes(",")
-      ? normalizedPrice.replace(/\\./g, "").replace(",", ".")
+      ? normalizedPrice.replace(/\./g, "").replace(",", ".")
       : normalizedPrice;
     const value = Number(parsedPrice);
-    const names = [...new Set(colors.split("\\n").map(v => v.trim()).filter(Boolean))];
-    const validStock = /^\\d+$/.test(stock.trim()) && Number.isSafeInteger(Number(stock));
+    const names = [...new Set(colors.split("\n").map(v => v.trim()).filter(Boolean))];
+    const validStock = /^\d+$/.test(stock.trim()) && Number.isSafeInteger(Number(stock));
     const finalSlug = normalizedSlug(slug || name);
     const finalSku = (sku.trim() || suggestedSku(name)).toUpperCase();
     const errors: string[] = [];
     if (!categoryId || !category) errors.push("Selecione uma categoria.");
     if (!name.trim()) errors.push("Informe o nome do produto.");
     if (!finalSlug) errors.push("Informe um nome ou identificador válido para a URL.");
-    if (!/^(?:\\d+)(?:\\.\\d{1,2})?$/.test(parsedPrice) || !Number.isFinite(value) || value <= 0) errors.push("Informe um preço válido, como 59,90.");
+    if (!/^(?:\d+)(?:\.\d{1,2})?$/.test(parsedPrice) || !Number.isFinite(value) || value <= 0) errors.push("Informe um preço válido, como 59,90.");
     if (isFilament && names.length === 0) errors.push("Informe pelo menos uma cor, uma por linha.");
     if (!isFilament && !finalSku) errors.push("Informe o SKU ou o nome para gerar um código.");
     if (!isFilament && !validStock) errors.push("O estoque deve ser um número inteiro igual ou maior que zero.");
