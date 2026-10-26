@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cardWhatsAppUrl } from "@/lib/checkout";
+import { cardWhatsAppUrl, normalizeCheckoutWhatsApp } from "@/lib/checkout";
 import { SHIPPING_FLAT } from "@/lib/store";
 import { FIXED_SHIPPING_BRL } from "@/lib/shipping";
 
@@ -14,6 +14,19 @@ describe("Prepared checkout", () => {
   it.each(["", "invalid", "5511"])("blocks WhatsApp with an unconfigured or invalid contact: %s", number => {
     vi.stubEnv("VITE_CHECKOUT_WHATSAPP_NUMBER", number);
     expect(cardWhatsAppUrl()).toBeNull();
+  });
+
+  it("normalizes a Brazilian DDD number from the admin settings", () => {
+    expect(normalizeCheckoutWhatsApp("(71) 99999-9999")).toBe("5571999999999");
+    expect(normalizeCheckoutWhatsApp("+55 71 99999-9999")).toBe("5571999999999");
+    expect(normalizeCheckoutWhatsApp("123")).toBeNull();
+  });
+
+  it("prioritizes the WhatsApp saved in ADM over the environment number", () => {
+    vi.stubEnv("VITE_CHECKOUT_WHATSAPP_NUMBER", "5511999999999");
+    const url = cardWhatsAppUrl([], 0, undefined, [], "71999999999");
+    expect(new URL(url!).pathname).toBe("/5571999999999");
+    expect(cardWhatsAppUrl([], 0, undefined, [], "123")).toBeNull();
   });
 
   it("encodes the order and delivery details for the configured contact", () => {
