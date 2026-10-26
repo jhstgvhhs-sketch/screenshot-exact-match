@@ -5,6 +5,7 @@ import { productImage, totalStock, type Product, type Variant } from "@/lib/cata
 
 export function ProductCard({ p, variant }: { p: Product; variant?: Variant }) {
   const stock = variant ? variant.stock : totalStock(p);
+  const isPrinter = p.categories?.slug === "impressoras";
   const imageIndex = variant ? p.product_variants.findIndex(v => v.id === variant.id) : -1;
   const image = imageIndex >= 0 ? (p.images?.[imageIndex + 1] || productImage(p)) : productImage(p);
   const simpleProduct = p.categories?.slug !== "filamentos" && p.product_variants.length === 1 && p.product_variants[0].color === "Padrão";
@@ -22,7 +23,7 @@ export function ProductCard({ p, variant }: { p: Product; variant?: Variant }) {
           {p.product_variants.slice(0, 8).map(v => <span key={v.id} title={v.color} className="size-3.5 rounded-full border border-border" style={{ background: v.color_hex ?? undefined }} />)}
           {p.product_variants.length > 8 && <span className="text-xs text-muted-foreground">+{p.product_variants.length - 8}</span>}
         </div>}
-        <div className="mt-auto border-t border-border pt-3"><p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preço no Pix</p><p className="font-display text-xl font-extrabold text-primary sm:text-2xl">{brl(p.price)}</p><p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><CreditCard className="size-3.5" /> Cartão com juros · simule no WhatsApp</p><div className="mt-3 flex items-center justify-between gap-2"><span className={stock > 0 ? "text-xs text-green-500" : "text-xs text-muted-foreground"}>{stock > 0 ? "Em estoque" : /filamento/i.test(p.name) ? "Sob encomenda" : "Indisponível"}</span><span className="inline-flex items-center gap-1 text-xs font-bold text-primary">Ver produto <ArrowUpRight className="size-4" /></span></div></div>
+        <div className="mt-auto border-t border-border pt-3"><p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preço no Pix</p><p className="font-display text-xl font-extrabold text-primary sm:text-2xl">{brl(p.price)}</p><p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><CreditCard className="size-3.5" /> {isPrinter ? "Até 10x sem juros no cartão" : "Cartão com juros · simule no WhatsApp"}</p><div className="mt-3 flex items-center justify-between gap-2"><span className={stock > 0 ? "text-xs text-green-500" : "text-xs text-muted-foreground"}>{stock > 0 ? "Em estoque" : /filamento/i.test(p.name) ? "Sob encomenda" : "Indisponível"}</span><span className="inline-flex items-center gap-1 text-xs font-bold text-primary">Ver produto <ArrowUpRight className="size-4" /></span></div></div>
       </div>
     </Link>
   );
