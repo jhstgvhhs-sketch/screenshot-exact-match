@@ -179,7 +179,7 @@ function ProdutoContent() {
                 ))}
             </dl>
           )}
-          <PaymentPrice price={p.price} productName={p.name} prominent />
+          <PaymentPrice price={p.price} productName={p.name} isPrinter={p.categories?.slug === "impressoras"} prominent />
           {!simpleProduct && (
             <div>
               <p aria-live="polite" className="mb-2 text-sm font-semibold">
