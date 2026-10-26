@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { categoriesQuery, type Product } from "@/lib/catalog";
+import { ProductImageField } from "./ProductImageField";
+
 export function ProductEditor({
   product,
   onSaved,
@@ -74,7 +76,10 @@ export function CatalogEditFields({
     price: String(product.price),
   });
   const [images, setImages] = useState<string[]>(() =>
-    Array.from({ length: variants.length + 1 }, (_, i) => product.images?.[i] ?? ""),
+    Array.from(
+      { length: Math.max(variants.length + 1, product.images?.length ?? 0) },
+      (_, i) => product.images?.[i] ?? "",
+    ),
   );
   const [variantFields, setVariantFields] = useState<
     Record<string, { color: string; color_hex: string; sku: string; stock: string }>
@@ -87,6 +92,7 @@ export function CatalogEditFields({
     ),
   );
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState("");
   const setField = (key: keyof typeof fields, value: string) =>
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -96,6 +102,7 @@ export function CatalogEditFields({
     setImages((prev) => prev.map((s, i) => (i === index ? value : s)));
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (uploading) return;
     if (
       !window.confirm(
         "Confirmar as alterações deste produto? As informações serão atualizadas na loja após salvar.",
@@ -201,7 +208,7 @@ export function CatalogEditFields({
     }
   }
   async function removeVariant(v: EditableProduct["product_variants"][number], index: number) {
-    if (saving) return;
+    if (saving || uploading) return;
     if (variants.length <= 1) {
       setFeedback("Não é possível excluir a última cor. Mantenha pelo menos uma variante.");
       return;
@@ -306,15 +313,13 @@ export function CatalogEditFields({
         />
       </label>
       <h4 className="font-semibold">Imagens do produto</h4>
-      <label className="block text-sm">
-        Foto principal (URL HTTPS)
-        <input
-          type="url"
-          value={images[0]}
-          onChange={(e) => setImage(0, e.target.value)}
-          className={inputClass}
-        />
-      </label>
+      <ProductImageField
+        label="Foto principal"
+        value={images[0]}
+        onChange={(url) => setImage(0, url)}
+        disabled={saving || uploading}
+        onUploadingChange={setUploading}
+      />
       <h4 className="font-semibold">Editar cores, estoque e fotos</h4>
       <p className="text-xs text-muted-foreground">
         As cores existentes são editadas no próprio registro, sem excluir variantes. A imagem de
@@ -327,7 +332,7 @@ export function CatalogEditFields({
               <span className="font-semibold">{v.color}</span>
               <button
                 type="button"
-                disabled={saving || variants.length <= 1}
+                disabled={saving || uploading || variants.length <= 1}
                 onClick={() => void removeVariant(v, i)}
                 className="rounded-lg border border-destructive px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50"
                 aria-label={`Excluir somente a cor ${v.color}`}
@@ -354,22 +359,13 @@ export function CatalogEditFields({
                 </label>
               ))}
             </div>
-            <label className="mt-3 block text-xs font-semibold">
-              Foto desta cor (URL HTTPS)
-              <input
-                type="url"
-                value={images[i + 1]}
-                onChange={(e) => setImage(i + 1, e.target.value)}
-                className={inputClass}
-              />
-            </label>
-            {images[i + 1] && (
-              <img
-                src={images[i + 1]}
-                alt={variantFields[v.id].color}
-                className="mt-2 size-20 rounded border border-border object-cover"
-              />
-            )}
+            <ProductImageField
+              label={`Foto da cor ${v.color}`}
+              value={images[i + 1]}
+              onChange={(url) => setImage(i + 1, url)}
+              disabled={saving || uploading}
+              onUploadingChange={setUploading}
+            />
           </div>
         ))}
       </div>
@@ -379,7 +375,7 @@ export function CatalogEditFields({
         </p>
       )}
       <button
-        disabled={saving}
+        disabled={saving || uploading}
         type="submit"
         className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50"
       >
@@ -431,9 +427,11 @@ export function NewProductForm({
   const [imageUrl, setImageUrl] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState("");
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (uploading) return;
     const value = Number(price.replace(",", "."));
     const names = [
       ...new Set(
@@ -543,16 +541,13 @@ export function NewProductForm({
             className="mt-2 w-full rounded-lg border border-input bg-background p-3"
           />
         </label>
-        <label className="text-sm font-semibold">
-          URL da foto principal (opcional)
-          <input
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://..."
-            className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-          />
-        </label>
+        <ProductImageField
+          label="Foto principal (opcional)"
+          value={imageUrl}
+          onChange={setImageUrl}
+          disabled={busy || uploading}
+          onUploadingChange={setUploading}
+        />
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm font-semibold">
@@ -615,7 +610,7 @@ export function NewProductForm({
         </p>
       )}
       <button
-        disabled={busy}
+        disabled={busy || uploading}
         type="submit"
         className="mt-5 rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50"
       >
@@ -643,6 +638,7 @@ export function DraftProductEditor({
     Object.fromEntries(variants.map((v, i) => [v.id, product.images?.[i + 1] ?? ""])),
   );
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState("");
   const validUrl = (s: string) => {
     try {
@@ -653,6 +649,7 @@ export function DraftProductEditor({
     }
   };
   async function save(publish: boolean) {
+    if (uploading) return;
     if (
       !window.confirm(
         publish
@@ -698,35 +695,26 @@ export function DraftProductEditor({
       <p className="mt-1 text-sm text-muted-foreground">
         Inativo — ainda não aparece no catálogo público.
       </p>
-      <label className="mt-4 block text-sm font-semibold">
-        Foto principal (URL HTTPS)
-        <input
-          type="url"
-          value={mainImage}
-          onChange={(e) => setMainImage(e.target.value)}
-          placeholder="https://..."
-          className="mt-2 w-full rounded-lg border border-input bg-background p-3"
-        />
-      </label>
-      <p className="mt-4 text-sm font-semibold">Fotos por cor (links HTTPS)</p>
+      <ProductImageField
+        label="Foto principal"
+        value={mainImage}
+        onChange={setMainImage}
+        disabled={busy || uploading}
+        onUploadingChange={setUploading}
+      />
+      <p className="mt-4 text-sm font-semibold">Fotos por cor</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {variants.map((v) => (
-          <label key={v.id} className="text-sm">
-            {v.color}
-            <input
-              type="url"
-              value={colorImages[v.id] ?? ""}
-              onChange={(e) => setColorImages((prev) => ({ ...prev, [v.id]: e.target.value }))}
-              placeholder="https://..."
-              className="mt-1 w-full rounded-lg border border-input bg-background p-2"
-            />
-          </label>
+          <ProductImageField
+            key={v.id}
+            label={`Foto da cor ${v.color}`}
+            value={colorImages[v.id] ?? ""}
+            onChange={(url) => setColorImages((prev) => ({ ...prev, [v.id]: url }))}
+            disabled={busy || uploading}
+            onUploadingChange={setUploading}
+          />
         ))}
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Nesta etapa, as imagens são cadastradas por URL. O envio de arquivos e a troca automática de
-        imagem ao selecionar uma cor serão implementados separadamente.
-      </p>
       {feedback && (
         <p role="status" className="mt-4 text-sm">
           {feedback}
@@ -735,7 +723,7 @@ export function DraftProductEditor({
       <div className="mt-5 flex flex-wrap gap-3">
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || uploading}
           onClick={() => void save(false)}
           className="rounded-lg border border-input px-5 py-3 font-semibold disabled:opacity-50"
         >
@@ -743,7 +731,7 @@ export function DraftProductEditor({
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || uploading}
           onClick={() => void save(true)}
           className="rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50"
         >
