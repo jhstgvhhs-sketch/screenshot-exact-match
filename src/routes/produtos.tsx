@@ -2,7 +2,7 @@ import { publicPageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "@/components/site/ProductCard";
-import { productsQuery } from "@/lib/catalog";
+import { productsQuery, categoriesQuery } from "@/lib/catalog";
 
 export const Route = createFileRoute("/produtos")({
   validateSearch: (s: Record<string, unknown>): { q?: string; categoria?: string } => ({
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/produtos")({
   loader: async ({ context, deps }) => ({ products: await context.queryClient.fetchQuery(productsQuery()), ...deps }),
   head: ({ loaderData }) => {
     const category = loaderData?.categoria;
-    const title = category ? `Comprar ${category.toUpperCase()} para Impressão 3D | 3DFLEX` : "Comprar Filamentos para Impressão 3D | 3DFLEX";
+    const title = category ? `Comprar ${category.toUpperCase()} para Impressão 3D | 3DFLEX` : "Filamentos, Impressoras 3D e Acessórios | 3DFLEX";
     return { ...publicPageHead(category ? `/produtos?categoria=${encodeURIComponent(category)}` : "/produtos", title, category ? `Confira as opções de ${category.toUpperCase()} da 3DFLEX. Compare cores e produtos e escolha o ideal para sua impressão 3D.` : "Compre filamentos PLA, PETG e acessórios para impressão 3D na 3DFLEX. Confira marcas, cores e opções disponíveis."), ...(loaderData?.q ? { meta: [...publicPageHead("/produtos", title, "Resultados de busca na 3DFLEX.").meta, { name: "robots", content: "noindex, follow" }] } : {}) };
   },
   component: Produtos,
@@ -23,6 +23,7 @@ function Produtos() {
   const { q, categoria } = Route.useSearch();
   const initial = Route.useLoaderData();
   const { data = [], isLoading, isError, refetch } = useQuery({ ...productsQuery(), initialData: initial.products });
+  const { data: categories = [] } = useQuery(categoriesQuery());
   const list = data.filter(
     (p) =>
       (!categoria || p.categories?.slug?.toLowerCase() === categoria.toLowerCase() ||
@@ -35,6 +36,10 @@ function Produtos() {
     <section className="container-x py-10">
       <h1 className="text-3xl font-bold">{categoria ? categoria.toUpperCase() : "Todos os produtos"}</h1>
       {q && <p className="mt-1 text-muted-foreground">Busca: “{q}”</p>}
+      <nav aria-label="Filtrar produtos por categoria" className="mt-5 flex flex-wrap gap-2">
+        <a href="/produtos" className={`rounded-lg border px-3 py-2 text-sm ${!categoria ? "border-primary text-primary" : "border-border text-muted-foreground hover:border-primary"}`}>Todos</a>
+        {categories.map(cat => <a key={cat.id} href={`/produtos?categoria=${encodeURIComponent(cat.slug)}`} className={`rounded-lg border px-3 py-2 text-sm ${categoria === cat.slug ? "border-primary text-primary" : "border-border text-muted-foreground hover:border-primary"}`}>{cat.name}</a>)}
+      </nav>
       {isError && <p role="alert">Não foi possível atualizar o catálogo. <button type="button" className="text-primary underline" onClick={() => void refetch()}>Tentar novamente</button></p>}
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         {list.flatMap(p => p.product_variants.length ? p.product_variants.filter(v => !q || `${p.name} ${p.brand} ${v.color}`.toLowerCase().includes(q.toLowerCase())).map(v => <ProductCard key={v.id} p={p} variant={v} />) : [<ProductCard key={p.id} p={p} />])}
