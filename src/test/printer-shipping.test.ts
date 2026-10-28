@@ -26,11 +26,21 @@ describe("Printer shipping", () => {
     expect(shippingForOrder(600.01, "pix")).toBe(0);
     expect(shippingForOrder(1000, "card")).toBe(37.8);
   });
-  it("includes zero freight and correct total in the assisted card message", () => {
+  it("includes zero freight, correct total and printer installment terms in the assisted card message", () => {
     vi.stubEnv("VITE_CHECKOUT_WHATSAPP_NUMBER", "11999999999");
     const message = new URL(cardWhatsAppUrl([printer], 500)!).searchParams.get("text")!;
     expect(message).toContain("Frete: Grátis");
-    expect(message).toMatch(/Total: R\$\s500,00/);
+    expect(message).toMatch(/Total: R\\$\\s500,00/);
+    expect(message).toContain("Condição de cartão: compra com impressora, até 10x sem juros (consulte a loja).");
     expect(message).not.toContain("537,80");
   });
+  it("keeps machine-interest terms for orders without printers", () => {
+    vi.stubEnv("VITE_CHECKOUT_WHATSAPP_NUMBER", "11999999999");
+    const filament = { ...printer, categorySlug: "filamentos", name: "PLA", price: 59.9 };
+    const message = new URL(cardWhatsAppUrl([filament], 59.9)!).searchParams.get("text")!;
+    expect(message).toContain("Condição de cartão: parcelamento sujeito aos juros da maquineta; confirme o valor com a loja.");
+    expect(message).not.toContain("até 10x sem juros");
+  });
+
+
 });
