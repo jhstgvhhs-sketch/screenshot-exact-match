@@ -11,11 +11,11 @@ describe("Pix display and card simulation", () => {
   it("uses the configured destination and actual product price without fixed installments", () => {
     // Reserved test fixture only; the link is never opened or sent.
     config.whatsapp = "11999999999";
-    render(<PaymentPrice price={3800} productName="Filamento de teste" prominent />;
+    render(<PaymentPrice price={3800} productName="Filamento de teste" prominent />);
     const link = screen.getByRole("link", { name: "Simular no WhatsApp" });
     const url = new URL(link.getAttribute("href")!);
     expect(url.pathname).toBe("/5511999999999");
-    expect(url.searchParams.get("text")).toContain("Impressora de teste");
+    expect(url.searchParams.get("text")).toContain("Filamento de teste");
     expect(url.searchParams.get("text")).toMatch(/3.800,00/);
     expect(url.searchParams.get("text")).toContain("juros da maquineta");
     expect(screen.queryByText(/sem juros/i)).not.toBeInTheDocument();
