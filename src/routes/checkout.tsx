@@ -140,7 +140,7 @@ export function Checkout() {
           </label>
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
             <input type="radio" name="payment" disabled={!!pixData || !!cardOrderId} checked={payment === "card"} onChange={() => { setPayment("card"); setCardShippingConfirmed(false); setValidated(false); }} className="mt-1 accent-primary" />
-            <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">Parcelamento sujeito aos juros da maquineta. Simule as parcelas e o valor final com nosso atendimento pelo WhatsApp.</span></span>
+            <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">{printerShipping ? "Compra com impressora: consulte até 10x sem juros no cartão pelo WhatsApp." : "Parcelamento sujeito aos juros da maquineta. Simule as parcelas e o valor final com nosso atendimento pelo WhatsApp."}</span></span>
           </label>
         </fieldset>
         {payment === "card" && !printerShipping && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed && (
