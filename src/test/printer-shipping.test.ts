@@ -30,7 +30,7 @@ describe("Printer shipping", () => {
     vi.stubEnv("VITE_CHECKOUT_WHATSAPP_NUMBER", "11999999999");
     const message = new URL(cardWhatsAppUrl([printer], 500)!).searchParams.get("text")!;
     expect(message).toContain("Frete: Grátis");
-    expect(message).toContain("Total: R$ 500,00");
+    expect(message).toMatch(/Total: R\$\s500,00/);
     expect(message).toContain("Condição de cartão: compra com impressora, até 10x sem juros (consulte a loja).");
     expect(message).not.toContain("537,80");
   });
