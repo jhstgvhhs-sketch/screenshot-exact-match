@@ -50,6 +50,7 @@ describe("Checkout review and navigation", () => {
     expect(screen.getByText("Frete grátis no Pix")).toBeInTheDocument();
     fireEvent.submit(document.getElementById("checkout-form")!);
     fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    expect(screen.getByText(/Parcelamento sujeito aos juros da maquineta/)).toBeInTheDocument();
     expect(screen.getByText("Frete fixo")).toBeInTheDocument();
     expect(screen.getByText(/687,80/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continuar com cartão" })).toBeDisabled();
@@ -84,6 +85,7 @@ describe("Printer checkout shipping", () => {
       expect(screen.getByText("Frete grátis — impressora")).toBeInTheDocument();
       fireEvent.submit(document.getElementById("checkout-form")!);
       fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+      expect(screen.getByText(/Compra com impressora: consulte até 10x sem juros no cartão pelo WhatsApp/)).toBeInTheDocument();
       expect(screen.getByText("Frete grátis — impressora")).toBeInTheDocument();
       expect(screen.queryByText("Frete grátis no Pix! Não quer aproveitar?")).not.toBeInTheDocument();
       expect(screen.queryByText("Frete fixo")).not.toBeInTheDocument();
