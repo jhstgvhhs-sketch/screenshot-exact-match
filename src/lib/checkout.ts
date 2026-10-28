@@ -1,7 +1,7 @@
 import type { GiftItem } from "./conservation-kit";
 import type { CartItem } from "./cart";
 import { brl } from "./store";
-import { shippingForOrder } from "./shipping";
+import { hasPrinter, shippingForOrder } from "./shipping";
 
 // Public contact number only. Blackcat credentials must never be configured here.
 export function normalizeCheckoutWhatsApp(value: string): string | null {
@@ -22,6 +22,7 @@ export function cardWhatsAppUrl(items: CartItem[] = [], subtotal = 0, data?: For
     `Subtotal: ${brl(subtotal)}`,
     shipping === 0 ? "Frete: Grátis (compra com impressora)" : `Frete fixo: ${brl(shipping)}`,
     `Total: ${brl(subtotal + shipping)}`,
+    ...(hasPrinter(items) ? ["Condição de cartão: compra com impressora, até 10x sem juros (consulte a loja)."] : ["Condição de cartão: parcelamento sujeito aos juros da maquineta; confirme o valor com a loja."]),
     `Nome: ${field("name")}`,
     `E-mail: ${field("email")}`,
     `Telefone: ${field("phone")}`,
