@@ -23,18 +23,16 @@ npm i
 npm run dev
 ```
 
-## Checkout preparado
+## Checkout e pagamento
 
-O carrinho encaminha para `/checkout`, com dados de contato, entrega e resumo.
-O frete fixo de R$ 37,80 é compartilhado entre produto, carrinho e checkout.
-Pix Blackcat permanece desativado: não há cobrança, QR Code ou criação de pedido.
+O checkout tem duas etapas: dados de entrega e pagamento.
 
-Para habilitar o encaminhamento de cartão ao atendimento, configure
-`VITE_CHECKOUT_WHATSAPP_NUMBER` com `55` + DDD + número e gere uma nova build.
-A configuração vazia ou inválida mantém o atendimento indisponível. O cliente
-confere o formulário e clica em **Continuar no WhatsApp** para enviar o resumo;
-o carrinho é preservado e nenhum pagamento ou pedido é confirmado pelo site.
-Nunca configure credenciais Blackcat em variáveis `VITE_*`.
+- **Pix:** o checkout chama a Edge Function `blackcat-create-pix`. A emissão real depende da função estar publicada, das migrações corretas no banco e dos secrets da Blackcat configurados. Mantenha `BLACKCAT_PIX_ENABLED=false` até concluir testes reais controlados.
+- **Cartão:** o site registra o pedido como pendente pelo RPC `place_order` e encaminha o cliente ao WhatsApp configurado em `store_settings.whatsapp` (com `VITE_CHECKOUT_WHATSAPP_NUMBER` como alternativa). O pagamento só deve ser marcado como pago após confirmação manual.
+- **Frete:** compras com qualquer impressora têm frete grátis no Pix ou cartão. Nos demais pedidos, o frete grátis acima de R$ 600,00 vale exclusivamente para Pix.
+- **Parcelamento:** compras com impressora anunciam até 10x sem juros no cartão; os demais produtos estão sujeitos aos juros da maquineta. Confirme as condições finais com o atendimento.
+
+Configure `VITE_CHECKOUT_WHATSAPP_NUMBER` com `55` + DDD + número se a loja ainda não tiver um WhatsApp salvo nas configurações públicas. Nunca configure credenciais Blackcat em variáveis `VITE_*`.
 
 ## Blackcat Pix — configuração no servidor
 
