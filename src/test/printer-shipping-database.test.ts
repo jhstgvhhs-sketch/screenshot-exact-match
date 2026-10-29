@@ -7,6 +7,8 @@ const printer = "00000000-0000-4000-8000-000000000001",
   other = "00000000-0000-4000-8000-000000000002";
 beforeAll(async () => {
   await db.exec(`create role anon; create role authenticated; create schema auth;
+    create type app_role as enum ('admin', 'user');
+    create function has_role(_user_id uuid, _role app_role) returns boolean language sql stable as $select false$;
     create function auth.uid() returns uuid language sql as $$select '11111111-1111-4111-8111-111111111111'::uuid$$;
     create table categories(id uuid primary key,slug text);
     create table products(id uuid primary key,brand text,material text,weight text,active boolean,name text,price numeric,category_id uuid);
@@ -35,6 +37,12 @@ beforeAll(async () => {
   );
   await db.exec(migration);
   await db.exec(migration);
+  await db.exec(
+    await readFile(
+      new URL("../../supabase/migrations/20261028000001_configurable_shipping.sql", import.meta.url),
+      "utf8",
+    ),
+  );
 }, 30000);
 afterAll(() => db.close());
 async function place(items: { variant_id: string; quantity: number }[], method: string) {
@@ -62,6 +70,27 @@ describe("Printer freight — isolated checkout database", () => {
     expect(Number(mixed.shipping)).toBe(0);
     expect(Number(mixed.total)).toBe(560);
   });
+
+  it("uses admin-configured freight in the authoritative order RPC", async () => {
+    await db.exec(
+      "update shipping_settings set fixed_shipping_brl=12.34, free_pix_shipping_enabled=true, free_pix_shipping_threshold_brl=50 where id='main'",
+    );
+    const freePix = await place([{ variant_id: other, quantity: 1 }], "pix");
+    expect(Number(freePix.shipping)).toBe(0);
+
+    const card = await place([{ variant_id: other, quantity: 1 }], "cartao");
+    expect(Number(card.shipping)).toBe(12.34);
+    expect(Number(card.total)).toBe(72.34);
+
+    await db.exec("update shipping_settings set free_pix_shipping_enabled=false where id='main'");
+    const regularPix = await place([{ variant_id: other, quantity: 1 }], "pix");
+    expect(Number(regularPix.shipping)).toBe(12.34);
+
+    await db.exec("update shipping_settings set fixed_shipping_brl=0 where id='main'");
+    const zeroFreight = await place([{ variant_id: other, quantity: 1 }], "cartao");
+    expect(Number(zeroFreight.shipping)).toBe(0);
+  });
+
   it("preserves other cart rules and ignores invented browser flags", async () => {
     const normal = await place([{ variant_id: other, quantity: 1 }], "pix");
     expect(Number(normal.shipping)).toBe(37.8);
