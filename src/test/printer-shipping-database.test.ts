@@ -8,7 +8,7 @@ const printer = "00000000-0000-4000-8000-000000000001",
 beforeAll(async () => {
   await db.exec(`create role anon; create role authenticated; create schema auth;
     create type app_role as enum ('admin', 'user');
-    create function has_role(_user_id uuid, _role app_role) returns boolean language sql stable as $select false$;
+    create function has_role(_user_id uuid, _role app_role) returns boolean language sql stable as 'select false';
     create function auth.uid() returns uuid language sql as $$select '11111111-1111-4111-8111-111111111111'::uuid$$;
     create table categories(id uuid primary key,slug text);
     create table products(id uuid primary key,brand text,material text,weight text,active boolean,name text,price numeric,category_id uuid);
@@ -92,6 +92,7 @@ describe("Printer freight — isolated checkout database", () => {
   });
 
   it("preserves other cart rules and ignores invented browser flags", async () => {
+    await db.exec("update shipping_settings set fixed_shipping_brl=37.80, free_pix_shipping_enabled=true, free_pix_shipping_threshold_brl=600 where id='main'");
     const normal = await place([{ variant_id: other, quantity: 1 }], "pix");
     expect(Number(normal.shipping)).toBe(37.8);
     expect(Number(normal.total)).toBe(97.8);
