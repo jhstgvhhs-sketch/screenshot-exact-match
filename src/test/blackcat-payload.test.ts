@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blackcatPixPayload } from '../../supabase/functions/_shared/blackcat-payload';
+import { blackcatPixPayload, pixShippingCents } from '../../supabase/functions/_shared/blackcat-payload';
 const order = { total: 97.7, shipping: 37.8, customer_name: 'Teste', customer_email: 'teste@example.com',
   customer_phone: '(11) 99999-9999', customer_cpf: '529.982.247-25', ship_street: 'Rua A', ship_number: '10',
   ship_complement: 'Apto 2', ship_district: 'Centro', ship_city: 'São Paulo', ship_state: 'sp', ship_cep: '01001-000' };
