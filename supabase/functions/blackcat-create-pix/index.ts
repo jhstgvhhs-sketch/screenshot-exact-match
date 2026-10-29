@@ -132,16 +132,34 @@ Deno.serve(async (request) => {
     createdOrderId = orderId as string;
 
     // ---- Phase 3: rebuild the payload from the stored order ----
-    const { data: order } = await admin.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).single();
-    const { data: dbLines } = await admin.from("order_items").select("product_name,unit_price,quantity,products(categories(slug))").eq("order_id", orderId);
+    const { data: order, error: orderReadError } = await admin.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).single();
+    // order_items.product_id has no FK constraint in the existing schema, so PostgREST
+    // cannot reliably embed products(categories(slug)) from order_items. Read IDs first,
+    // then resolve categories from products, where the category relationship is defined.
+    const { data: dbLines, error: linesReadError } = await admin.from("order_items")
+      .select("product_name,unit_price,quantity,product_id").eq("order_id", orderId);
     const amount = Math.round(Number(order?.total) * 100);
     let chargePayload: Record<string, unknown>;
     try {
-      if (!order || !dbLines?.length || !Number.isSafeInteger(amount) || amount <= 0)
+      if (orderReadError || linesReadError)
+        throw new Error("Falha ao consultar os dados do pedido");
+      if (!order || !dbLines?.length || !Number.isSafeInteger(amount) || amount <= 0 ||
+          dbLines.some(line => typeof line.product_id !== "string" || !line.product_id))
         throw new Error("Pedido requer revisão");
+      const productIds = [...new Set(dbLines.map(line => line.product_id as string))];
+      const { data: lineProducts, error: productsError } = await admin.from("products")
+        .select("id,categories(slug)").in("id", productIds);
+      if (productsError || !lineProducts || lineProducts.length !== productIds.length)
+        throw new Error("Não foi possível confirmar as categorias dos produtos");
+      const categoryByProductId = new Map(lineProducts.map(product => [product.id, product.categories?.slug ?? null]));
       chargePayload = blackcatPixPayload(
         order,
-        dbLines.map(line => ({ ...line, category_slug: (line as { products?: { categories?: { slug: string } | null } | null }).products?.categories?.slug })),
+        dbLines.map(line => ({
+          product_name: line.product_name,
+          unit_price: line.unit_price,
+          quantity: line.quantity,
+          category_slug: categoryByProductId.get(line.product_id as string) ?? null,
+        })),
         orderId, postbackUrl, rules,
       );
     } catch (validationError) {
