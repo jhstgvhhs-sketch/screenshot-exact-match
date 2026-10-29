@@ -8,6 +8,9 @@ const cart = vi.hoisted(() => ({
   items: [{ productSlug: "pla", variantId: "v1", name: "PLA", color: "Branco", quantity: 1, price: 59.9 }] as CartItem[],
 }));
 vi.mock("@/lib/cart", () => ({ useCart: () => cart }));
+vi.mock("@/lib/shipping-settings", () => ({
+  useShippingSettings: () => ({ data: { fixed_shipping_brl: 37.8, free_pix_shipping_enabled: true, free_pix_shipping_threshold_brl: 600 } }),
+}));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => () => ({}),
