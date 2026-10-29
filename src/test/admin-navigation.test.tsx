@@ -41,6 +41,10 @@ describe("Admin navigation and mobile controls", () => {
       "href",
       "/admin?section=carts",
     );
+    expect(screen.getByRole("link", { name: "Configurar frete" })).toHaveAttribute(
+      "href",
+      "/admin?section=shipping-settings",
+    );
     expect(screen.getByRole("link", { name: "Segurança" })).toHaveAttribute("aria-current", "page");
     expect(screen.queryByText("Gestão de pedidos")).not.toBeInTheDocument();
     expect(screen.getByText("Acesso administrativo")).toBeInTheDocument();
