@@ -22,6 +22,7 @@ import {
   Settings,
   Bell,
   Shield,
+  SlidersHorizontal,
   Menu,
   PanelLeftClose,
   LogOut,
@@ -33,6 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { categoriesQuery } from "@/lib/catalog";
 import { AdminSectionBoundary } from "@/components/site/AdminSectionBoundary";
 import { PaymentGatewaySettings } from "@/components/site/PaymentGatewaySettings";
+import { ShippingSettingsEditor } from "@/components/site/ShippingSettings";
 import { StoreSettingsEditor } from "@/components/site/StoreSettings";
 import { PurchaseNotificationSettings } from "@/components/site/PurchaseNotificationSettings";
 import { ReviewModeration, AdminAddReview } from "@/components/site/ProductReviews";
@@ -89,6 +91,7 @@ const adminNavigation: { group: string; items: NavItem[] }[] = [
   {
     group: "Logística",
     items: [
+      { id: "shipping-settings", title: "Configurar frete", icon: SlidersHorizontal },
       { id: "tracking", title: "Rastreamento", icon: Truck },
       { id: "shipped", title: "Pedidos enviados", icon: Package },
       { id: "delivered", title: "Pedidos entregues", icon: PackageCheck },
@@ -404,6 +407,8 @@ function WorkspacePage({ section }: { section: string }) {
       return <PurchaseNotificationSettings />;
     case "payment-settings":
       return <PaymentGatewaySettings />;
+    case "shipping-settings":
+      return <ShippingSettingsEditor />;
     case "payments":
       return (
         <>
