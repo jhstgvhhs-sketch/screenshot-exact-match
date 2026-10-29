@@ -177,7 +177,6 @@ export type Database = {
       }
       orders: {
         Row: {
-          gift_items: Json
           archived_at: string | null
           coupon_code: string | null
           created_at: string
@@ -186,6 +185,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           discount: number
+          gift_items: Json
           id: string
           paid_at: string | null
           payment_method: string | null
@@ -207,7 +207,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          gift_items?: Json
           archived_at?: string | null
           coupon_code?: string | null
           created_at?: string
@@ -216,6 +215,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           discount?: number
+          gift_items?: Json
           id?: string
           paid_at?: string | null
           payment_method?: string | null
@@ -237,7 +237,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          gift_items?: Json
           archived_at?: string | null
           coupon_code?: string | null
           created_at?: string
@@ -246,6 +245,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           discount?: number
+          gift_items?: Json
           id?: string
           paid_at?: string | null
           payment_method?: string | null
@@ -265,6 +265,30 @@ export type Database = {
           tracking_code?: string | null
           tracking_url?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      payment_gateway_settings: {
+        Row: {
+          environment: string
+          id: string
+          pix_enabled: boolean
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          environment?: string
+          id?: string
+          pix_enabled?: boolean
+          provider?: string
+          updated_at?: string
+        }
+        Update: {
+          environment?: string
+          id?: string
+          pix_enabled?: boolean
+          provider?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -302,6 +326,47 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: true
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_reviews: {
+        Row: {
+          approved: boolean
+          author_name: string
+          comment: string
+          created_at: string
+          id: string
+          product_id: string | null
+          rating: number
+          source: string
+        }
+        Insert: {
+          approved?: boolean
+          author_name: string
+          comment: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          rating: number
+          source?: string
+        }
+        Update: {
+          approved?: boolean
+          author_name?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          rating?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -424,6 +489,36 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+        }
+        Relationships: []
+      }
+      purchase_notification_settings: {
+        Row: {
+          display_seconds: number
+          enabled: boolean
+          id: string
+          interval_seconds: number
+          messages: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          display_seconds?: number
+          enabled?: boolean
+          id?: string
+          interval_seconds?: number
+          messages?: Json
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          display_seconds?: number
+          enabled?: boolean
+          id?: string
+          interval_seconds?: number
+          messages?: Json
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -789,6 +884,30 @@ export type Database = {
         }
         Relationships: []
       }
+      shipping_settings: {
+        Row: {
+          fixed_shipping_brl: number
+          free_pix_shipping_enabled: boolean
+          free_pix_shipping_threshold_brl: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          fixed_shipping_brl?: number
+          free_pix_shipping_enabled?: boolean
+          free_pix_shipping_threshold_brl?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          fixed_shipping_brl?: number
+          free_pix_shipping_enabled?: boolean
+          free_pix_shipping_threshold_brl?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           about: string
@@ -797,6 +916,7 @@ export type Database = {
           business_name: string
           cnpj: string
           email: string
+          homepage_images: Json | null
           id: string
           legal_name: string
           logo_url: string
@@ -811,6 +931,7 @@ export type Database = {
           business_name?: string
           cnpj?: string
           email?: string
+          homepage_images?: Json | null
           id?: string
           legal_name?: string
           logo_url?: string
@@ -825,6 +946,7 @@ export type Database = {
           business_name?: string
           cnpj?: string
           email?: string
+          homepage_images?: Json | null
           id?: string
           legal_name?: string
           logo_url?: string
@@ -955,12 +1077,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      registry_sync_cart: { Args: { p_token: string; p_items: Json; p_contact?: Json; p_consents?: Json; p_source?: string }; Returns: Json }
-      admin_cart_registry: { Args: { p_page?: number; p_status?: string }; Returns: Json }
-      kit_conservation_preview: { Args: { _items: Json }; Returns: Json }
+      admin_cart_registry: {
+        Args: { p_page?: number; p_status?: string }
+        Returns: Json
+      }
       admin_customer_page: {
         Args: { p_page?: number; p_search?: string }
         Returns: Json
+      }
+      admin_delete_unused_product: {
+        Args: { p_product: string }
+        Returns: boolean
       }
       admin_financial_report: {
         Args: { p_end: string; p_start: string }
@@ -994,6 +1121,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      kit_conservation_preview: { Args: { _items: Json }; Returns: Json }
       place_order: {
         Args: {
           _coupon: string
@@ -1052,6 +1180,16 @@ export type Database = {
         Returns: string
       }
       recovery_tick: { Args: never; Returns: undefined }
+      registry_sync_cart: {
+        Args: {
+          p_consents?: Json
+          p_contact?: Json
+          p_items: Json
+          p_source?: string
+          p_token: string
+        }
+        Returns: Json
+      }
       release_unpaid_order_stock: {
         Args: { p_order_id: string; p_payment_status?: string }
         Returns: boolean
@@ -1069,6 +1207,7 @@ export type Database = {
         Args: { p_fingerprint: string; p_order: string }
         Returns: Json
       }
+      valid_homepage_images: { Args: { value: Json }; Returns: boolean }
       valid_tracking_url: { Args: { p_url: string }; Returns: boolean }
     }
     Enums: {
