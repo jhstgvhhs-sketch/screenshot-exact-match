@@ -20,7 +20,7 @@ export function cardWhatsAppUrl(items: CartItem[] = [], subtotal = 0, data?: For
     ...items.map(item => `${item.name} — ${item.color} × ${item.quantity}: ${brl(item.price * item.quantity)}`),
     ...gifts.map(gift => `Brinde: ${gift.quantity} ${gift.unit} de ${gift.name} — Grátis`),
     `Subtotal: ${brl(subtotal)}`,
-    shipping === 0 ? "Frete: Grátis (compra com impressora)" : `Frete fixo: ${brl(shipping)}`,
+    shipping === 0 ? (hasPrinter(items) ? "Frete: Grátis (compra com impressora)" : "Frete: Grátis (configuração da loja)") : `Frete fixo: ${brl(shipping)}`,
     `Total: ${brl(subtotal + shipping)}`,
     ...(hasPrinter(items) ? ["Condição de cartão: compra com impressora, até 10x sem juros (consulte a loja)."] : ["Condição de cartão: parcelamento sujeito aos juros da maquineta; confirme o valor com a loja."]),
     `Nome: ${field("name")}`,
