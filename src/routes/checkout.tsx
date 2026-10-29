@@ -4,7 +4,8 @@ import { useState, type FormEvent } from "react";
 import { reviewCheckoutItems } from "@/lib/checkout-review";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
-import { shippingForOrder, FREE_PIX_SHIPPING_THRESHOLD_BRL, hasPrinter } from "@/lib/shipping";
+import { shippingForOrder, hasPrinter, hasFreePixShipping } from "@/lib/shipping";
+import { useShippingSettings } from "@/lib/shipping-settings";
 import { cardWhatsAppUrl } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
 import { RecoveryConsent } from "@/components/RecoveryConsent";
@@ -25,6 +26,9 @@ type Payment = "pix" | "card";
 
 export function Checkout() {
   const { items, subtotal, replace } = useCart();
+  const shippingSettingsQuery = useShippingSettings();
+  const shippingSettings = shippingSettingsQuery.data;
+
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [kit, setKit] = useState(EMPTY_KIT);
   const [payment, setPayment] = useState<Payment>("pix");
@@ -79,7 +83,7 @@ export function Checkout() {
       const { data: storeContact, error: contactError } = await (supabase as unknown as { from: (table: string) => any })
         .from("store_settings").select("whatsapp").eq("id", "main").maybeSingle();
       if (contactError) throw new Error("Não foi possível consultar o WhatsApp da loja. Tente novamente.");
-      const cardLink = cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts, storeContact?.whatsapp?.trim() || undefined);
+      const cardLink = cardWhatsAppUrl(items, subtotal, deliveryData, kit.gifts, storeContact?.whatsapp?.trim() || undefined, shippingSettings);
       if (!cardLink) throw new Error("O atendimento para cartão está indisponível. Consulte os canais de contato da loja ou escolha Pix.");
       const { data, error } = await supabase.rpc("place_order", {
         _items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })),
@@ -110,7 +114,8 @@ export function Checkout() {
   if (!items.length) return <section className="container-x py-12"><h1 className="text-3xl font-bold">Finalizar compra</h1><p className="mt-4 text-muted-foreground">Seu carrinho está vazio.</p><Link className="mt-5 inline-block text-primary underline" to="/produtos">Explorar produtos</Link></section>;
 
   const printerShipping = hasPrinter(items);
-  const shipping = shippingForOrder(subtotal, payment === "pix" ? "pix" : "card", items);
+  const shouldOfferPixShipping = hasFreePixShipping(subtotal, items, shippingSettings) && (shippingSettings?.fixed_shipping_brl ?? 37.8) > 0;
+  const shipping = shippingForOrder(subtotal, payment === "pix" ? "pix" : "card", items, shippingSettings);
   const fieldClass = "w-full rounded-lg border border-input bg-background px-3 py-2 text-base text-foreground sm:text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   return <section className="container-x py-10">
     <h1 className="text-3xl font-bold">{step === "details" ? "Dados de entrega" : "Pagamento"}</h1>
@@ -143,7 +148,7 @@ export function Checkout() {
             <span><strong>Cartão de crédito — WhatsApp</strong><span className="block text-xs text-muted-foreground">{printerShipping ? "Compra com impressora: consulte até 10x sem juros no cartão pelo WhatsApp." : "Parcelamento sujeito aos juros da maquineta. Simule as parcelas e o valor final com nosso atendimento pelo WhatsApp."}</span></span>
           </label>
         </fieldset>
-        {payment === "card" && !printerShipping && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed && (
+        {payment === "card" && shouldOfferPixShipping && !cardShippingConfirmed && (
           <div role="alert" className="space-y-3 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
             <p className="text-base font-bold">Frete grátis no Pix! Não quer aproveitar?</p>
             <p className="text-muted-foreground">Você economiza {brl(shippingForOrder(subtotal, "card", items))} escolhendo Pix. No cartão, o frete continua {brl(shippingForOrder(subtotal, "card", items))}.</p>
@@ -153,8 +158,8 @@ export function Checkout() {
             </div>
           </div>
         )}
-        {payment === "card" && cardShippingConfirmed && !printerShipping && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && <p className="text-xs text-muted-foreground">Você escolheu continuar no cartão com frete de {brl(shippingForOrder(subtotal, "card", items))}. <button type="button" className="underline text-primary" onClick={() => setCardShippingConfirmed(false)}>Rever oferta Pix</button></p>}
-        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (!printerShipping && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={!kit.ready || pixLoading || cardLoading || !!pixData || (payment === "card" && !!cardOrderId) || (payment === "card" && !printerShipping && subtotal > FREE_PIX_SHIPPING_THRESHOLD_BRL && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : pixData ? "Pix já gerado" : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
+        {payment === "card" && cardShippingConfirmed && shouldOfferPixShipping && <p className="text-xs text-muted-foreground">Você escolheu continuar no cartão com frete de {brl(shippingForOrder(subtotal, "card", items))}. <button type="button" className="underline text-primary" onClick={() => setCardShippingConfirmed(false)}>Rever oferta Pix</button></p>}
+        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (shouldOfferPixShipping && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={!kit.ready || pixLoading || cardLoading || !!pixData || (payment === "card" && !!cardOrderId) || (payment === "card" && shouldOfferPixShipping && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : pixData ? "Pix já gerado" : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
         {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
         {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
         {pixData && payment === "pix" && <div className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="font-bold">Pagamento Pix — pedido {pixData.orderId}</h2><PixPaymentStatus orderId={pixData.orderId}><PixQrCode copyPaste={pixData.copyPaste} /><label className="block text-sm">Pix copia e cola<textarea className="mt-2 w-full rounded-lg border bg-background p-3" readOnly rows={3} value={pixData.copyPaste}/></label><button type="button" className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={() => void navigator.clipboard.writeText(pixData.copyPaste)}>Copiar código Pix</button><p className="text-sm text-muted-foreground">Aguarde a confirmação do pagamento. Não faça um novo pedido enquanto este estiver pendente.</p></PixPaymentStatus></div>}
@@ -169,7 +174,7 @@ export function Checkout() {
         <ul className="space-y-3 text-sm">{items.map(item => <li key={item.variantId} className="flex justify-between gap-3"><span className="min-w-0 break-words">{item.name} — {item.color} × {item.quantity}</span><span className="shrink-0">{brl(item.price * item.quantity)}</span></li>)}</ul></div>
         <div className="order-4 lg:order-2"><ConservationCoupon items={items} disabled={pixLoading || cardLoading || !!pixData || !!cardOrderId} onChange={setKit}/></div>
         <div className="order-5 lg:order-3"><OrderGifts value={kit.gifts}/></div>
-        <p className="order-6 text-xs text-muted-foreground lg:order-4">Qualquer impressora tem frete grátis no Pix ou cartão. Nos demais pedidos: grátis acima de R$ 600,00 exclusivamente no Pix.</p><div className="order-2 space-y-2 border-t border-border pt-3 text-sm lg:order-5"><div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div><div className="flex justify-between"><span>{shipping === 0 ? (printerShipping ? "Frete grátis — impressora" : "Frete grátis no Pix") : "Frete fixo"}</span><span>{brl(shipping)}</span></div><div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span>Total</span><span>{brl(subtotal + shipping)}</span></div></div>
+        <p className="order-6 text-xs text-muted-foreground lg:order-4">{printerShipping ? "Qualquer impressora tem frete grátis no Pix ou cartão." : shippingSettings?.free_pix_shipping_enabled ? `Nos demais pedidos: frete grátis no Pix acima de ${brl(shippingSettings.free_pix_shipping_threshold_brl)}; abaixo do limite, frete de ${brl(shippingSettings.fixed_shipping_brl)}.` : `Nos demais pedidos, o frete fixo é ${brl(shippingSettings?.fixed_shipping_brl ?? 37.8)}.`}</p><div className="order-2 space-y-2 border-t border-border pt-3 text-sm lg:order-5"><div className="flex justify-between"><span>Subtotal</span><span>{brl(subtotal)}</span></div><div className="flex justify-between"><span>{shipping === 0 ? (printerShipping ? "Frete grátis — impressora" : payment === "pix" && hasFreePixShipping(subtotal, items, shippingSettings) ? "Frete grátis no Pix" : "Frete grátis configurado") : "Frete fixo"}</span><span>{brl(shipping)}</span></div><div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><span>Total</span><span>{brl(subtotal + shipping)}</span></div></div>
         <Link to="/carrinho" className="order-7 block rounded-lg border border-primary/40 px-4 py-3 text-center text-sm font-semibold text-primary hover:bg-primary/10">Voltar ao carrinho</Link>
       </aside>
     </div>
