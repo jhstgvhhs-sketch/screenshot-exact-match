@@ -17,16 +17,30 @@ export function ShippingSettingsEditor() {
       <section className="mt-8 rounded-xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Configuração de frete</h2>
         <p role="alert" className="mt-3 text-sm text-destructive">
-          Não foi possível carregar as regras de frete. Confirme se a migração
-          20261028000001_configurable_shipping.sql foi aplicada no banco conectado à loja.
+          A tabela de configuração do frete não está disponível no banco conectado à loja.
+          Publicar o código do site não cria essa tabela automaticamente.
         </p>
-        <button
-          type="button"
-          className="mt-3 rounded-lg border border-input px-4 py-2 text-sm font-semibold"
-          onClick={() => void query.refetch()}
+        <p className="mt-2 text-sm text-muted-foreground">
+          A migração SQL está no repositório. Aplique esse arquivo no banco Supabase usado pela loja
+          e depois tente novamente. Nenhuma alteração de frete foi salva.
+        </p>
+        <a
+          href="https://github.com/jhstgvhhs-sketch/screenshot-exact-match/blob/main/supabase/migrations/20261028000001_configurable_shipping.sql"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-block text-sm font-semibold text-primary underline"
         >
-          Tentar novamente
-        </button>
+          Abrir migração SQL no GitHub
+        </a>
+        <div>
+          <button
+            type="button"
+            className="mt-3 rounded-lg border border-input px-4 py-2 text-sm font-semibold"
+            onClick={() => void query.refetch()}
+          >
+            Tentar novamente
+          </button>
+        </div>
       </section>
     );
   }
