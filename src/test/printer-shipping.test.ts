@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { hasPrinter, shippingForOrder } from "@/lib/shipping";
+import { hasPrinter, hasFreePixShipping, shippingForOrder, type ShippingSettings } from "@/lib/shipping";
 import { cardWhatsAppUrl } from "@/lib/checkout";
 const printer = {
   variantId: "p",
@@ -43,4 +43,28 @@ describe("Printer shipping", () => {
   });
 
 
+});
+
+
+describe("Configurable shipping rules", () => {
+  const settings: ShippingSettings = {
+    fixed_shipping_brl: 12.34,
+    free_pix_shipping_enabled: true,
+    free_pix_shipping_threshold_brl: 50,
+  };
+
+  it("uses the configured fixed fee and strict Pix threshold", () => {
+    expect(hasFreePixShipping(60, [], settings)).toBe(true);
+    expect(shippingForOrder(60, "pix", [], settings)).toBe(0);
+    expect(shippingForOrder(50, "pix", [], settings)).toBe(12.34);
+    expect(shippingForOrder(60, "card", [], settings)).toBe(12.34);
+  });
+
+  it("can disable the Pix promotion or set zero freight for a controlled test", () => {
+    expect(
+      shippingForOrder(60, "pix", [], { ...settings, free_pix_shipping_enabled: false }),
+    ).toBe(12.34);
+    expect(shippingForOrder(60, "card", [], { ...settings, fixed_shipping_brl: 0 })).toBe(0);
+    expect(shippingForOrder(60, "card", [printer], settings)).toBe(0);
+  });
 });
