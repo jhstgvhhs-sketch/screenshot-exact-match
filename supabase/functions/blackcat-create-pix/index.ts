@@ -141,11 +141,15 @@ Deno.serve(async (request) => {
     const amount = Math.round(Number(order?.total) * 100);
     let chargePayload: Record<string, unknown>;
     try {
-      if (orderReadError || linesReadError)
-        throw new Error("Falha ao consultar os dados do pedido");
-      if (!order || !dbLines?.length || !Number.isSafeInteger(amount) || amount <= 0 ||
-          dbLines.some(line => typeof line.product_id !== "string" || !line.product_id))
-        throw new Error("Pedido requer revisão");
+      // Keep diagnostics specific in server logs without exposing order/customer data to the browser.
+      if (orderReadError) throw new Error(`order-read-failed:${orderReadError.code ?? "unknown"}`);
+      if (linesReadError) throw new Error(`order-items-read-failed:${linesReadError.code ?? "unknown"}`);
+      if (!order) throw new Error("order-not-found");
+      if (!dbLines?.length) throw new Error("order-items-empty");
+      if (!Number.isSafeInteger(amount)) throw new Error("invalid-order-total");
+      if (amount <= 0) throw new Error("nonpositive-order-total");
+      if (dbLines.some(line => typeof line.product_id !== "string" || !line.product_id))
+        throw new Error("missing-order-item-product-id");
       const productIds = [...new Set(dbLines.map(line => line.product_id as string))];
       const { data: lineProducts, error: productsError } = await admin.from("products")
         .select("id,categories(slug)").in("id", productIds);
