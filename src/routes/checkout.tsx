@@ -42,6 +42,7 @@ export function Checkout() {
   const [validated, setValidated] = useState(false);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
+  const [pixNeedsOrderCheck, setPixNeedsOrderCheck] = useState(false);
   const [pixData, setPixData] = useState<{ copyPaste: string; qrCodeBase64?: string; orderId: string } | null>(null);
 
   async function beginPix() {
@@ -58,9 +59,27 @@ export function Checkout() {
       const { data, error } = await supabase.functions.invoke("blackcat-create-pix", {
         body: { customer, items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })) }
       });
-      if (error) throw new Error("Não foi possível gerar o Pix agora. Consulte Meus Pedidos antes de tentar novamente.");
-      if (!data || typeof data.copyPaste !== "string" || typeof data.orderId !== "string")
+      if (error) {
+        let responseBody: { error?: unknown; orderId?: unknown } | null = null;
+        try {
+          const context = (error as { context?: unknown }).context;
+          if (context instanceof Response) responseBody = await context.clone().json();
+        } catch { /* Keep the safe generic message if the response is not JSON. */ }
+        if (typeof responseBody?.orderId === "string") {
+          setPixNeedsOrderCheck(true);
+          const detail = typeof responseBody.error === "string" ? responseBody.error : "Não foi possível concluir o Pix.";
+          throw new Error(`${detail} Pedido ${responseBody.orderId.slice(0, 8).toUpperCase()}. Consulte Meus Pedidos antes de tentar novamente.`);
+        }
+        if (typeof responseBody?.error === "string") throw new Error(responseBody.error);
+        throw new Error("Não foi possível gerar o Pix agora. Consulte Meus Pedidos antes de tentar novamente.");
+      }
+      if (!data || typeof data.copyPaste !== "string" || typeof data.orderId !== "string") {
+        if (typeof data?.orderId === "string") {
+          setPixNeedsOrderCheck(true);
+          throw new Error(`${data?.error || "Não foi possível concluir o Pix."} Pedido ${data.orderId.slice(0, 8).toUpperCase()}. Consulte Meus Pedidos antes de tentar novamente.`);
+        }
         throw new Error(data?.error || "Não foi possível gerar o Pix. Nenhuma cobrança foi confirmada.");
+      }
       setPixData({ copyPaste: data.copyPaste, qrCodeBase64: data.qrCodeBase64, orderId: data.orderId });
     } catch (error) {
       setPixError(error instanceof Error ? error.message : "Erro ao iniciar pagamento.");
@@ -159,9 +178,9 @@ export function Checkout() {
           </div>
         )}
         {payment === "card" && cardShippingConfirmed && shouldOfferPixShipping && <p className="text-xs text-muted-foreground">Você escolheu continuar no cartão com frete de {brl(shippingForOrder(subtotal, "card", items, shippingSettings))}. <button type="button" className="underline text-primary" onClick={() => setCardShippingConfirmed(false)}>Rever oferta Pix</button></p>}
-        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (shouldOfferPixShipping && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={shippingSettingsQuery.isLoading || !kit.ready || pixLoading || cardLoading || !!pixData || (payment === "card" && !!cardOrderId) || (payment === "card" && shouldOfferPixShipping && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : pixData ? "Pix já gerado" : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
+        <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (shouldOfferPixShipping && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={shippingSettingsQuery.isLoading || !kit.ready || pixLoading || cardLoading || !!pixData || pixNeedsOrderCheck || (payment === "card" && !!cardOrderId) || (payment === "card" && shouldOfferPixShipping && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : pixData ? "Pix já gerado" : pixNeedsOrderCheck ? "Confira Meus Pedidos" : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
         {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
-        {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
+        {pixError && payment === "pix" && <div role="alert" className="space-y-3 rounded-lg border border-border bg-card p-4 text-sm"><p>{pixError}</p>{pixNeedsOrderCheck && <Link to="/conta" className="inline-block font-semibold text-primary underline">Abrir Meus Pedidos</Link>}</div>}
         {pixData && payment === "pix" && <div className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="font-bold">Pagamento Pix — pedido {pixData.orderId}</h2><PixPaymentStatus orderId={pixData.orderId}><PixQrCode copyPaste={pixData.copyPaste} /><label className="block text-sm">Pix copia e cola<textarea className="mt-2 w-full rounded-lg border bg-background p-3" readOnly rows={3} value={pixData.copyPaste}/></label><button type="button" className="rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={() => void navigator.clipboard.writeText(pixData.copyPaste)}>Copiar código Pix</button><p className="text-sm text-muted-foreground">Aguarde a confirmação do pagamento. Não faça um novo pedido enquanto este estiver pendente.</p></PixPaymentStatus></div>}
         {validated && <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">{whatsappUrl ? `Pedido ${cardOrderId?.slice(0,8).toUpperCase()} registrado como pagamento pendente. Continue no WhatsApp. A loja só marcará como pago após confirmação manual.` : "Pedido registrado como pagamento pendente. O atendimento por WhatsApp está indisponível; consulte os canais de contato da loja antes de tentar novamente."}</p>}
         {validated && whatsappUrl && payment === "card" && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-primary px-5 py-3 text-center font-bold text-primary-foreground">Continuar no WhatsApp</a>}
