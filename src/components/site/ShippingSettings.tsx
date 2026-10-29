@@ -33,7 +33,6 @@ export function ShippingSettingsEditor() {
 
   return (
     <ShippingSettingsForm
-      key={JSON.stringify(query.data)}
       current={query.data}
       onSaved={() => void queryClient.invalidateQueries({ queryKey: ["shipping-settings"] })}
     />
