@@ -2,8 +2,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 import { createBlackcatPix } from "../_shared/blackcat.ts";
 import { blackcatPixPayload, pixShippingCents, type PixShippingRules } from "../_shared/blackcat-payload.ts";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Cache-Control": "no-store",
+};
+
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
-  status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" }
+  status, headers: { ...corsHeaders, "Content-Type": "application/json" }
 });
 
 const cents = (value: number | string) => Math.round(Number(value) * 100);
@@ -14,7 +21,7 @@ const logFailure = (stage: string, orderId: string | null, extra: Record<string,
   console.error(JSON.stringify({ fn: "blackcat-create-pix", stage, orderId, ...extra }));
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info" } });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   // Safety switch: never initiate a real charge before completing gateway and stock tests.
   if (Deno.env.get("BLACKCAT_PIX_ENABLED") !== "true")
