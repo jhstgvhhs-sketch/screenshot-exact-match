@@ -1,5 +1,14 @@
 project_id = "wexuhtwkwtieaiebhnje"
 
+# Pix creation is authenticated by the customer's Supabase JWT and revalidated in the handler.
+[functions.blackcat-create-pix]
+verify_jwt = true
+
+# Blackcat cannot send a Supabase user JWT. The handler verifies the transaction
+# against Blackcat's authenticated API and checks the transaction ID and amount.
+[functions.blackcat-webhook]
+verify_jwt = false
+
 # Public feed returns only timestamps of paid orders, never customer or order details.
 [functions.recent-purchases]
 verify_jwt = false
