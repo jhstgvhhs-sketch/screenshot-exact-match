@@ -1,7 +1,7 @@
 import type { GiftItem } from "./conservation-kit";
 import type { CartItem } from "./cart";
 import { brl } from "./store";
-import { hasPrinter, shippingForOrder } from "./shipping";
+import { DEFAULT_SHIPPING_SETTINGS, hasPrinter, shippingForOrder, type ShippingSettings } from "./shipping";
 
 // Public contact number only. Blackcat credentials must never be configured here.
 export function normalizeCheckoutWhatsApp(value: string): string | null {
@@ -10,11 +10,11 @@ export function normalizeCheckoutWhatsApp(value: string): string | null {
   return /^55\d{10,11}$/.test(phone) ? phone : null;
 }
 
-export function cardWhatsAppUrl(items: CartItem[] = [], subtotal = 0, data?: FormData, gifts: GiftItem[] = [], configuredPhone?: string): string | null {
+export function cardWhatsAppUrl(items: CartItem[] = [], subtotal = 0, data?: FormData, gifts: GiftItem[] = [], configuredPhone?: string, shippingSettings: ShippingSettings = DEFAULT_SHIPPING_SETTINGS): string | null {
   const phone = normalizeCheckoutWhatsApp(configuredPhone ?? (import.meta.env["VITE_CHECKOUT_WHATSAPP_NUMBER"] ?? ""));
   if (!phone) return null;
   const field = (name: string) => String(data?.get(name) ?? "").trim();
-  const shipping = shippingForOrder(subtotal, "card", items);
+  const shipping = shippingForOrder(subtotal, "card", items, shippingSettings);
   const message = [
     "Olá! Quero finalizar minha compra na 3DFLEX por cartão.",
     ...items.map(item => `${item.name} — ${item.color} × ${item.quantity}: ${brl(item.price * item.quantity)}`),
