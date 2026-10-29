@@ -37,29 +37,38 @@ INSERT INTO public.shipping_settings (id)
 VALUES ('main')
 ON CONFLICT (id) DO NOTHING;
 
--- Preserve the existing order validation, coupon handling, stock reservation and printer-free rule.
--- Only replace the hard-coded freight amount and Pix free-shipping threshold.
+-- Keep this migration compatible with both the original checkout RPC and the
+-- version where printer orders were already granted free shipping.
 DO $migration$
 DECLARE
   definition text := pg_get_functiondef('public.place_order(jsonb,jsonb,text,text)'::regprocedure);
+  old_pix_rule constant text := 'WHEN _method = ''pix'' AND _sub > 600';
+  configurable_pix_rule constant text := 'WHEN _method = ''pix''
+       AND COALESCE((SELECT free_pix_shipping_enabled FROM public.shipping_settings WHERE id = ''main''), true)
+       AND _sub > COALESCE((SELECT free_pix_shipping_threshold_brl FROM public.shipping_settings WHERE id = ''main''), 600)';
+  printer_and_pix_rule constant text := 'WHEN EXISTS (
+       SELECT 1 FROM public.order_items oi_printer
+       JOIN public.products p_printer ON p_printer.id = oi_printer.product_id
+       JOIN public.categories c_printer ON c_printer.id = p_printer.category_id
+       WHERE oi_printer.order_id = _order AND c_printer.slug = ''impressoras''
+     ) THEN 0
+     WHEN _method = ''pix''
+       AND COALESCE((SELECT free_pix_shipping_enabled FROM public.shipping_settings WHERE id = ''main''), true)
+       AND _sub > COALESCE((SELECT free_pix_shipping_threshold_brl FROM public.shipping_settings WHERE id = ''main''), 600)';
 BEGIN
   IF position('shipping_settings' IN definition) > 0 THEN
     RETURN;
   END IF;
 
-  IF position('oi_printer' IN definition) = 0
-     OR position('WHEN _method = ''pix'' AND _sub > 600' IN definition) = 0
-     OR position('ELSE 37.80' IN definition) = 0 THEN
+  IF position(old_pix_rule IN definition) = 0 OR position('ELSE 37.80' IN definition) = 0 THEN
     RAISE EXCEPTION 'place_order shipping rule changed; review the current function before applying configurable freight';
   END IF;
 
-  definition := replace(
-    definition,
-    'WHEN _method = ''pix'' AND _sub > 600',
-    'WHEN _method = ''pix''
-       AND COALESCE((SELECT free_pix_shipping_enabled FROM public.shipping_settings WHERE id = ''main''), true)
-       AND _sub > COALESCE((SELECT free_pix_shipping_threshold_brl FROM public.shipping_settings WHERE id = ''main''), 600)'
-  );
+  IF position('oi_printer' IN definition) = 0 THEN
+    definition := replace(definition, old_pix_rule, printer_and_pix_rule);
+  ELSE
+    definition := replace(definition, old_pix_rule, configurable_pix_rule);
+  END IF;
 
   definition := replace(
     definition,
