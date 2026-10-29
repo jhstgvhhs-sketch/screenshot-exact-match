@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { reviewCheckoutItems } from "@/lib/checkout-review";
 import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/store";
-import { shippingForOrder, hasPrinter, hasFreePixShipping } from "@/lib/shipping";
+import { DEFAULT_SHIPPING_SETTINGS, shippingForOrder, hasPrinter, hasFreePixShipping } from "@/lib/shipping";
 import { useShippingSettings } from "@/lib/shipping-settings";
 import { cardWhatsAppUrl } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,7 @@ type Payment = "pix" | "card";
 export function Checkout() {
   const { items, subtotal, replace } = useCart();
   const shippingSettingsQuery = useShippingSettings();
-  const shippingSettings = shippingSettingsQuery.data;
+  const shippingSettings = shippingSettingsQuery.data ?? DEFAULT_SHIPPING_SETTINGS;
 
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [kit, setKit] = useState(EMPTY_KIT);
