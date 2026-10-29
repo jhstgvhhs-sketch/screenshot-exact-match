@@ -16,7 +16,7 @@ As áreas têm endereços próprios em `/admin?section=...`, suportam voltar/ava
 | Catálogo | Produtos, adicionar produto, categorias, estoque, avaliações |
 | Financeiro | Visão financeira, relatórios de vendas, pagamentos |
 | Marketing | Remarketing (configuração existente), automações (fila e histórico existentes) |
-| Logística | Rastreamento, enviados, entregues |
+| Logística | Configurar frete, rastreamento, enviados, entregues |
 | Sistema | Loja, pagamentos, notificações, segurança |
 
 Não foi criada uma seção de campanhas: não há ferramenta de campanhas no projeto. Logística e pagamentos usam a mesma gestão de pedidos, sem duplicar regras. Segurança informa os controles existentes, sem botões fictícios nem exibição de credenciais. Recuperação conserva a mensagem de infraestrutura pendente quando as funções não estão disponíveis.
@@ -24,7 +24,7 @@ Não foi criada uma seção de campanhas: não há ferramenta de campanhas no pr
 ## Implantação pelo proprietário
 
 1. Usar o código atualizado da main do GitHub para publicar a loja, preservando alterações posteriores. Não sobrescrever a branch remota à força.
-2. No backend **wexuhtwkwtieaiebhnje**, revisar e aplicar **somente** `supabase/migrations/20261024114941_admin_management_dashboard.sql` em uma transação. A migração de recuperação já foi instalada; não reaplicá-la por causa desta entrega.
+2. No backend **wexuhtwkwtieaiebhnje**, revisar e aplicar as migrações pendentes `supabase/migrations/20261024114941_admin_management_dashboard.sql` e `supabase/migrations/20261028000001_configurable_shipping.sql`, na ordem cronológica. A migração de recuperação já foi instalada; não reaplicá-la por causa desta entrega.
 3. Publicar o frontend. Este painel não exige novas Edge Functions nem novos Secrets. As funções/agendamentos da recuperação continuam seguindo `docs/cart-recovery.md`, independentemente desta migração.
 4. Entrar com uma conta administrativa real e executar a conferência manual abaixo. Sem a nova migração, dashboard, clientes e listas de pedidos exibem erro de infraestrutura em vez de resultados fabricados. Catálogo e configurações permanecem independentes.
 
@@ -58,7 +58,7 @@ As RPCs usam **SECURITY INVOKER**, mantêm as políticas de RLS e exigem `has_ro
 - Salvar andamento não envia `payment_status`. Confirmar recebimento é uma ação separada e mantém as confirmações explícitas existentes; não gera cobrança. Arquivar continua usando `archive_order_admin`.
 - Clientes são perfis cadastrados, paginados, com quantidade de pedidos e compras pagas incluindo arquivados, excluindo cancelados. O e-mail vem do pedido mais recente, quando disponível; não foi criada consulta ao schema Auth. O histórico do cliente reutiliza a gestão de pedidos.
 - Cupons usam a tabela e regras existentes; criação e ativação/desativação exigem ações explícitas e confirmação.
-- Gateway, notificações e configurações usam seus componentes atuais. Não foram alterados Blackcat, QR Pix, cartão, carrinho, checkout, frete ou automações do servidor. O cabeçalho/rodapé público e os avisos de compra ficam fora de `/admin`; as páginas públicas continuam usando-os.
+- Gateway, notificações e configurações usam seus componentes atuais. A seção **Configurar frete** salva o frete fixo e a regra de frete grátis no Pix em `shipping_settings`; carrinho e checkout leem esses valores e a RPC `place_order` os aplica no servidor. Frete grátis de impressoras permanece obrigatório. A migração precisa ser aplicada no backend correto para que a configuração afete os novos pedidos. O restante da integração Blackcat, QR Pix, cartão e automações do servidor não é alterado por essa tela. O cabeçalho/rodapé público e os avisos de compra ficam fora de `/admin`; as páginas públicas continuam usando-os.
 
 ## Validação
 
