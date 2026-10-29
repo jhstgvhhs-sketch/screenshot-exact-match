@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blackcatPixPayload } from '../../supabase/functions/_shared/blackcat-payload';
+import { blackcatPixPayload, pixShippingCents } from '../../supabase/functions/_shared/blackcat-payload';
 const order = { total: 97.7, shipping: 37.8, customer_name: 'Teste', customer_email: 'teste@example.com',
   customer_phone: '(11) 99999-9999', customer_cpf: '529.982.247-25', ship_street: 'Rua A', ship_number: '10',
   ship_complement: 'Apto 2', ship_district: 'Centro', ship_city: 'São Paulo', ship_state: 'sp', ship_cep: '01001-000' };
@@ -30,5 +30,30 @@ describe('Printer Pix payload eligibility', () => {
     expect(result.amount).toBe(50000);
     expect(result.items).toHaveLength(1);
     expect(() => blackcatPixPayload({ ...order, total: 500, shipping: 0 }, [{ ...printer[0], category_slug: 'acessorios', product_name: 'Impressora no título' }], 'id', 'https://example.com')).toThrow();
+  });
+});
+
+describe('Pix shipping rules resolved from store settings', () => {
+  it('computes shipping with the same rules as place_order', () => {
+    expect(pixShippingCents(59900, false)).toBe(3780);
+    expect(pixShippingCents(60000, false)).toBe(3780);
+    expect(pixShippingCents(60001, false)).toBe(0);
+    expect(pixShippingCents(10000, true)).toBe(0);
+    expect(pixShippingCents(60001, false, { fixedShippingCents: 3780, freeThresholdCents: 60000, freeEnabled: false })).toBe(3780);
+    expect(pixShippingCents(10000, false, { fixedShippingCents: 2500, freeThresholdCents: 60000, freeEnabled: true })).toBe(2500);
+  });
+  it('accepts the shipping the configured rules produce and rejects any other value', () => {
+    const custom = { fixedShippingCents: 2500, freeThresholdCents: 30000, freeEnabled: true };
+    const cheap = [{ product_name: 'Filamento', unit_price: 100, quantity: 1 }];
+    expect(blackcatPixPayload({ ...order, total: 125, shipping: 25 }, cheap, 'id', 'https://example.com', custom).amount).toBe(12500);
+    expect(() => blackcatPixPayload({ ...order, total: 137.8, shipping: 37.8 }, cheap, 'id', 'https://example.com', custom)).toThrow();
+    expect(blackcatPixPayload({ ...order, total: 400, shipping: 0 }, [{ product_name: 'Filamento', unit_price: 400, quantity: 1 }], 'id', 'https://example.com', custom).amount).toBe(40000);
+  });
+  it('accepts zero freight above R$ 600 with the default rules', () => {
+    expect(blackcatPixPayload({ ...order, total: 700, shipping: 0 }, [{ product_name: 'Filamento', unit_price: 700, quantity: 1 }], 'id', 'https://example.com').amount).toBe(70000);
+  });
+  it('treats a zero fixed rate configured by the store as valid free shipping', () => {
+    const zeroFixed = { fixedShippingCents: 0, freeThresholdCents: 60000, freeEnabled: true };
+    expect(blackcatPixPayload({ ...order, total: 59.9, shipping: 0 }, lines, 'id', 'https://example.com', zeroFixed).amount).toBe(5990);
   });
 });
