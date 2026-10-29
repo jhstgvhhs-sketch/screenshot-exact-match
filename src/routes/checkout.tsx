@@ -151,14 +151,14 @@ export function Checkout() {
         {payment === "card" && shouldOfferPixShipping && !cardShippingConfirmed && (
           <div role="alert" className="space-y-3 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
             <p className="text-base font-bold">Frete grátis no Pix! Não quer aproveitar?</p>
-            <p className="text-muted-foreground">Você economiza {brl(shippingForOrder(subtotal, "card", items))} escolhendo Pix. No cartão, o frete continua {brl(shippingForOrder(subtotal, "card", items))}.</p>
+            <p className="text-muted-foreground">Você economiza {brl(shippingForOrder(subtotal, "card", items, shippingSettings))} escolhendo Pix. No cartão, o frete continua {brl(shippingForOrder(subtotal, "card", items, shippingSettings))}.</p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button type="button" onClick={() => { setPayment("pix"); setCardShippingConfirmed(false); setValidated(false); }} className="rounded-lg bg-primary px-4 py-3 font-bold text-primary-foreground">Quero frete grátis no Pix</button>
               <button type="button" onClick={() => setCardShippingConfirmed(true)} className="rounded-lg border border-input bg-background px-4 py-3 font-semibold text-foreground">Quero continuar no cartão mesmo</button>
             </div>
           </div>
         )}
-        {payment === "card" && cardShippingConfirmed && shouldOfferPixShipping && <p className="text-xs text-muted-foreground">Você escolheu continuar no cartão com frete de {brl(shippingForOrder(subtotal, "card", items))}. <button type="button" className="underline text-primary" onClick={() => setCardShippingConfirmed(false)}>Rever oferta Pix</button></p>}
+        {payment === "card" && cardShippingConfirmed && shouldOfferPixShipping && <p className="text-xs text-muted-foreground">Você escolheu continuar no cartão com frete de {brl(shippingForOrder(subtotal, "card", items, shippingSettings))}. <button type="button" className="underline text-primary" onClick={() => setCardShippingConfirmed(false)}>Rever oferta Pix</button></p>}
         <button type="button" onClick={() => { if (payment === "pix") { void beginPix(); return; } if (shouldOfferPixShipping && !cardShippingConfirmed) { setCardShippingConfirmed(false); return; } void beginCard(); }} disabled={!kit.ready || pixLoading || cardLoading || !!pixData || (payment === "card" && !!cardOrderId) || (payment === "card" && shouldOfferPixShipping && !cardShippingConfirmed)} className="w-full rounded-lg bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50">{pixLoading ? "Preparando Pix..." : pixData ? "Pix já gerado" : cardLoading ? "Registrando pedido..." : cardOrderId && payment === "card" ? "Pedido registrado" : `Continuar com ${payment === "pix" ? "Pix" : "cartão"}` }</button>
         {cardError && payment === "card" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{cardError}</p>}
         {pixError && payment === "pix" && <p role="alert" className="rounded-lg border border-border bg-card p-4 text-sm">{pixError}</p>}
