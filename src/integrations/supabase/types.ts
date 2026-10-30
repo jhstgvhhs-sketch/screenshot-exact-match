@@ -173,6 +173,20 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -227,10 +241,10 @@ export type Database = {
           ship_number: string
           ship_state: string
           ship_street: string
-          shipping: number
+          shipping?: number
           status?: string
-          subtotal: number
-          total: number
+          subtotal?: number
+          total?: number
           tracking_carrier?: string | null
           tracking_code?: string | null
           tracking_url?: string | null
@@ -1062,7 +1076,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
+          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
@@ -1077,10 +1091,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_cart_registry: {
-        Args: { p_page?: number; p_status?: string }
-        Returns: Json
-      }
       admin_customer_page: {
         Args: { p_page?: number; p_search?: string }
         Returns: Json
@@ -1114,13 +1124,21 @@ export type Database = {
       }
       archive_order_admin: { Args: { p_order_id: string }; Returns: boolean }
       check_coupon: { Args: { _code: string }; Returns: Json }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
       kit_conservation_preview: { Args: { _items: Json }; Returns: Json }
       place_order: {
         Args: {
@@ -1180,16 +1198,6 @@ export type Database = {
         Returns: string
       }
       recovery_tick: { Args: never; Returns: undefined }
-      registry_sync_cart: {
-        Args: {
-          p_consents?: Json
-          p_contact?: Json
-          p_items: Json
-          p_source?: string
-          p_token: string
-        }
-        Returns: Json
-      }
       release_unpaid_order_stock: {
         Args: { p_order_id: string; p_payment_status?: string }
         Returns: boolean
