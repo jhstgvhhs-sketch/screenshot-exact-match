@@ -46,7 +46,7 @@ create or replace function public.admin_cart_registry(p_page integer default 0,p
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare result jsonb;
 begin
- if auth.uid() is null or not public.has_role(_user_id=>auth.uid(),_role=>'admin'::public.app_role) then raise exception 'Acesso administrativo necessário' using errcode='42501'; end if;
+ if auth.uid() is null or not public.has_role(auth.uid(),'admin'::public.app_role) then raise exception 'Acesso administrativo necessário' using errcode='42501'; end if;
  if p_page<0 or p_page>100000 or p_status not in ('all','active','abandoned','recovering','recovered','expired','pending_payment','completed') then raise exception 'Filtro inválido'; end if;
  perform public.recovery_reconcile();
  with base as (
