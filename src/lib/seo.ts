@@ -34,11 +34,12 @@ export function publicPageHead(path: string, title: string, description: string,
   };
 }
 export function productHead(product: Product, variantId?: string) {
-  const index = product.product_variants.findIndex((v) => v.id === variantId);
-  const variant = product.product_variants[index];
+  const variants = Array.isArray(product.product_variants) ? product.product_variants : [];
+  const images = Array.isArray(product.images) ? product.images : [];
+  const index = variants.findIndex((v) => v.id === variantId);
+  const variant = variants[index];
   const name = product.name + (variant ? ` — ${variant.color}` : "");
-  const image =
-    index >= 0 ? product.images[index + 1] || productImage(product) : productImage(product);
+  const image = (index >= 0 ? images[index + 1] : undefined) || images[0] || productImage(product);
   const path =
     `/produto/${encodeURIComponent(product.slug)}` +
     (variant ? `?cor=${encodeURIComponent(variant.id)}` : "");
@@ -48,10 +49,10 @@ export function productHead(product: Product, variantId?: string) {
   )
     .replace(/\s+/g, " ")
     .slice(0, 160);
-  const variants = variant ? [variant] : product.product_variants;
-  const availability = variants.some((v) => v.stock > 0)
+  const selectedVariants = variant ? [variant] : variants;
+  const availability = selectedVariants.some((v) => v.stock > 0)
     ? "InStock"
-    : variants.length && /filamento/i.test(product.name)
+    : selectedVariants.length && /filamento/i.test(product.name)
       ? "PreOrder"
       : "OutOfStock";
   const schema = {
