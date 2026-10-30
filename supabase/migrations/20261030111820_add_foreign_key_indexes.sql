@@ -1,0 +1,11 @@
+CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON public.order_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_variant_id ON public.order_items(variant_id);
+CREATE INDEX IF NOT EXISTS idx_products_category_id ON public.products(category_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_attempts_cart_id ON public.recovery_attempts(cart_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_attempts_job_id ON public.recovery_attempts(job_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_carts_linked_order_id ON public.recovery_carts(linked_order_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_carts_parent_id ON public.recovery_carts(parent_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_carts_recovered_order_id ON public.recovery_carts(recovered_order_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_consents_cart_id ON public.recovery_consents(cart_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_links_cart_id ON public.recovery_links(cart_id);
+CREATE INDEX IF NOT EXISTS idx_tracking_email_attempts_notification_id ON public.tracking_email_attempts(notification_id);
