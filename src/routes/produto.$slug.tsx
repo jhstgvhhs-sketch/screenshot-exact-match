@@ -10,7 +10,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ProductReviews, ProductReviewSummary } from "@/components/site/ProductReviews";
-import { productImage, productQuery } from "@/lib/catalog";
+import { productImage, productQuery, productsQuery, type Product } from "@/lib/catalog";
 import { quantityLimit } from "@/lib/cart-stock";
 import { useCart } from "@/lib/cart";
 import { brl, lookupCep, maskCep, type CepAddress } from "@/lib/store";
@@ -22,7 +22,17 @@ export const Route = createFileRoute("/produto/$slug")({
   }),
   loaderDeps: ({ search }) => ({ cor: search.cor }),
   loader: async ({ context, params, deps }) => {
-    const product = await context.queryClient.fetchQuery(productQuery(params.slug));
+    // Reuse the product already fetched by the storefront/catalog when navigating
+    // from a product card. Fetch an isolated record only for direct page visits.
+    const cachedProducts = context.queryClient.getQueryData<Product[]>(productsQuery().queryKey);
+    let product = cachedProducts?.find((item) => item.slug === params.slug) ?? null;
+
+    if (product) {
+      context.queryClient.setQueryData(productQuery(params.slug).queryKey, product);
+    } else {
+      product = await context.queryClient.fetchQuery(productQuery(params.slug));
+    }
+
     if (!product) throw notFound();
     return { product, cor: deps.cor };
   },
@@ -62,7 +72,7 @@ function ProdutoContent() {
     data: p,
     isLoading,
     isError,
-  } = useQuery({ ...productQuery(slug), initialData: initial.product });
+  } = useQuery({ ...productQuery(slug), initialData: initial.product, staleTime: 60_000 });
   const cart = useCart();
   const nav = useNavigate();
   const [vid, setVid] = useState<string>();
