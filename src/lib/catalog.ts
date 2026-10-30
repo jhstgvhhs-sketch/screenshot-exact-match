@@ -28,12 +28,46 @@ export const productsQuery = () =>
 export const productQuery = (slug: string) =>
   queryOptions({
     queryKey: ["product", slug],
+    staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select(SELECT).eq("slug", slug).eq("active", true).maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      const p = data as unknown as Product;
-      return { ...p, price: Number(p.price), product_variants: [...p.product_variants].sort((a, b) => a.sort - b.sort) };
+      // Keep direct product URLs independent from PostgREST relationship embedding.
+      // The catalog query already embeds these relationships; this fallback reads
+      // the product, category and variants explicitly to avoid schema-cache issues.
+      const { data: product, error: productError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("slug", slug)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (productError) throw productError;
+      if (!product) return null;
+
+      let categories: Product["categories"] = null;
+      if (product.category_id) {
+        const { data: category, error: categoryError } = await supabase
+          .from("categories")
+          .select("name,slug")
+          .eq("id", product.category_id)
+          .maybeSingle();
+        if (categoryError) throw categoryError;
+        categories = category ? { name: category.name, slug: category.slug } : null;
+      }
+
+      const { data: variants, error: variantsError } = await supabase
+        .from("product_variants")
+        .select("*")
+        .eq("product_id", product.id)
+        .order("sort", { ascending: true });
+      if (variantsError) throw variantsError;
+
+      return {
+        ...product,
+        price: Number(product.price),
+        categories,
+        images: Array.isArray(product.images) ? product.images : [],
+        product_variants: variants ?? [],
+      } as Product;
     },
   });
 
