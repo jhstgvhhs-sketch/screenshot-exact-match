@@ -23,10 +23,6 @@ const logFailure = (stage: string, orderId: string | null, extra: Record<string,
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  // Safety switch: never initiate a real charge before completing gateway and stock tests.
-  if (Deno.env.get("BLACKCAT_PIX_ENABLED") !== "true")
-    return json({ error: "Pix em preparação. Nenhuma cobrança foi criada." }, 503);
-
   if (!Deno.env.get("BLACKCAT_API_KEY")) return json({ error: "Gateway não configurado" }, 503);
   let createdOrderId: string | null = null;
   let gatewayCalled = false;
@@ -45,6 +41,22 @@ Deno.serve(async (request) => {
     if (authError || !user) return json({ error: "Sessão inválida" }, 401);
 
     admin = createClient(url, serviceKey);
+
+    // Production Pix is controlled by the admin gateway setting, not a hard-coded deploy secret.
+    const { data: gateway, error: gatewayError } = await admin
+      .from("payment_gateway_settings")
+      .select("provider,environment,pix_enabled")
+      .eq("id", "main")
+      .maybeSingle();
+    if (
+      gatewayError || !gateway ||
+      gateway.provider !== "blackcat" ||
+      gateway.environment !== "production" ||
+      gateway.pix_enabled !== true
+    ) {
+      return json({ error: "Pix em preparação. Nenhuma cobrança foi criada." }, 503);
+    }
+
     const payload = await request.json().catch(() => null);
     const customer = payload?.customer;
     const items = payload?.items;
