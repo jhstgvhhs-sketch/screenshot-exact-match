@@ -7,19 +7,23 @@ export function ProductGallery({
   selectedImage,
   name,
   onSelect,
+  showThumbnails = true,
 }: {
   images: string[];
   selectedImage: string;
   name: string;
   onSelect: (image: string) => void;
+  showThumbnails?: boolean;
 }) {
   const [zoom, setZoom] = useState(false);
-  const photos = [...new Set([...(images ?? []).filter(Boolean), selectedImage])];
+  const photos = showThumbnails
+    ? [...new Set([...(images ?? []).filter(Boolean), selectedImage])]
+    : [selectedImage];
   const current = Math.max(0, photos.indexOf(selectedImage));
   const move = (step: number) => onSelect(photos[(current + step + photos.length) % photos.length]);
   return (
     <div className="flex min-w-0 flex-col gap-3 lg:flex-row">
-      <div
+      {showThumbnails && <div
         aria-label="Fotos do produto"
         className="order-2 flex gap-2 overflow-x-auto pb-1 lg:order-1 lg:max-h-[620px] lg:w-20 lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:pr-1"
       >
@@ -42,7 +46,7 @@ export function ProductGallery({
             />
           </button>
         ))}
-      </div>
+      </div>}
       <div className="relative order-1 min-w-0 flex-1 self-start overflow-hidden rounded-xl border border-border bg-card lg:order-2">
         <button
           type="button"
