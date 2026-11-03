@@ -157,6 +157,7 @@ function ProdutoContent() {
           selectedImage={selectedImage}
           name={v ? `${p.name} — ${v.color}` : p.name}
           onSelect={setGalleryImage}
+          showThumbnails={p.categories?.slug !== "filamentos"}
         />
         <div className="min-w-0 space-y-5">
           <div className="space-y-3">
