@@ -5,7 +5,7 @@ type Order = {
   ship_street: string; ship_number: string; ship_complement?: string | null;
   ship_district: string; ship_city: string; ship_state: string; ship_cep: string;
 };
-type Line = { category_slug?: string | null; product_name: string; unit_price: number | string; quantity: number };
+type Line = { category_slug?: string | null; product_slug?: string | null; product_name: string; unit_price: number | string; quantity: number };
 const digits = (value: string) => value.replace(/\D/g, "");
 const cents = (value: number | string) => Math.round(Number(value) * 100);
 
@@ -26,10 +26,10 @@ export const DEFAULT_PIX_SHIPPING_RULES: PixShippingRules = {
 // checkout can validate the charge before any order exists.
 export function pixShippingCents(
   subtotalCents: number,
-  hasPrinter: boolean,
+  hasPrinter: boolean,\n  hasKitNatal3D = false,
   rules: PixShippingRules = DEFAULT_PIX_SHIPPING_RULES,
 ): number {
-  if (hasPrinter) return 0;
+  if (hasPrinter || hasKitNatal3D) return 0;
   if (rules.freeEnabled && subtotalCents > rules.freeThresholdCents) return 0;
   return rules.fixedShippingCents;
 }
@@ -48,11 +48,11 @@ export function blackcatPixPayload(
   if (!Number.isSafeInteger(amount) || amount <= 0 || !lines.length)
     throw new Error("Total ou frete inválido");
   const subtotal = lines.reduce((sum, line) => sum + cents(line.unit_price) * line.quantity, 0);
-  const hasPrinter = lines.some(line => line.category_slug === "impressoras");
+  const hasPrinter = lines.some(line => line.category_slug === "impressoras");\n  const hasKitNatal3D = lines.some(line => line.product_slug === "kit-natal-3d");
   // Zero freight is only valid when the store settings themselves produce it:
   // a zero fixed rate, a printer in the cart, or free Pix shipping above the threshold.
   const zeroFreightAllowed =
-    rules.fixedShippingCents === 0 || hasPrinter ||
+    rules.fixedShippingCents === 0 || hasPrinter || hasKitNatal3D ||
     (rules.freeEnabled && subtotal > rules.freeThresholdCents);
   if (shipping !== rules.fixedShippingCents && !(shipping === 0 && zeroFreightAllowed))
     throw new Error("Total ou frete inválido");
