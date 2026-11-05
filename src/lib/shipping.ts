@@ -15,7 +15,11 @@ export const DEFAULT_SHIPPING_SETTINGS: ShippingSettings = {
 
 type ShippingItem = { categorySlug?: string | null; productSlug?: string | null };
 
-export function hasKitNatal3D(items: readonly ShippingItem[]): boolean {\n  return items.some((item) => item.productSlug === "kit-natal-3d");\n}\n\nexport function hasPrinter(items: readonly ShippingItem[]): boolean {
+export function hasKitNatal3D(items: readonly ShippingItem[]): boolean {
+  return items.some((item) => item.productSlug === "kit-natal-3d");
+}
+
+export function hasPrinter(items: readonly ShippingItem[]): boolean {
   return items.some((item) => item.categorySlug === "impressoras");
 }
 
