@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { hasPrinter, hasFreePixShipping, shippingForOrder, type ShippingSettings } from "@/lib/shipping";
+import { hasPrinter, hasKitNatal3D, hasFreePixShipping, shippingForOrder, type ShippingSettings } from "@/lib/shipping";
 import { cardWhatsAppUrl } from "@/lib/checkout";
 const printer = {
   variantId: "p",
@@ -12,6 +12,12 @@ const printer = {
 };
 afterEach(() => vi.unstubAllEnvs());
 describe("Printer shipping", () => {
+  const kitNatal = { productSlug: "kit-natal-3d", categorySlug: "acessorios" };
+  it.each(["pix", "card", "cartao"] as const)("waives freight for Kit Natal 3D nationwide with %s", method => {
+    expect(hasKitNatal3D([kitNatal])).toBe(true);
+    expect(shippingForOrder(1, method, [kitNatal])).toBe(0);
+    expect(shippingForOrder(100, method, [{ ...kitNatal, productSlug: "outro-kit" }])).toBe(37.8);
+  });
   it.each(["pix", "card", "cartao"] as const)(
     "waives freight for printers with %s, regardless of value",
     (method) => {
