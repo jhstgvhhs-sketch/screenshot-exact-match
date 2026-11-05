@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { brl } from "@/lib/store";
 
 export const Route = createFileRoute("/conta")({
-  validateSearch: (s: Record<string, unknown>): { aba?: string } => ({ aba: typeof s.aba === "string" ? s.aba : undefined }),
+  validateSearch: (s: Record<string, unknown>): { aba?: string; cadastro?: boolean; confirmacao?: boolean } => ({ aba: typeof s.aba === "string" ? s.aba : undefined, cadastro: s.cadastro === true || s.cadastro === "true", confirmacao: s.confirmacao === true || s.confirmacao === "1" }),
   head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" },{ title: "Minha conta — 3DFLEX" }, { name: "description", content: "Cadastro, dados pessoais, endereços e pedidos 3DFLEX." }] }),
   component: CustomerAccount,
 });
@@ -17,13 +17,14 @@ function CustomerAccount() {
   const { user, loading } = useAuth();
   const { aba } = Route.useSearch();
   const [tab, setTab] = useState<Tab>(aba === "pedidos" || aba === "enderecos" ? aba : "dados");
-  const [mode, setMode] = useState<"login" | "register" | "reset">("login");
+  const [mode, setMode] = useState<"login" | "register" | "reset">(Route.useSearch().cadastro ? "register" : "login");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(Route.useSearch().confirmacao ? "Se você acabou de confirmar seu e-mail, entre na sua conta para continuar." : "");
+  useEffect(() => { if (Route.useSearch().cadastro) setMode("register"); }, [Route.useSearch().cadastro]);
   useEffect(() => {
     if (!user) return;
     const metadata = user.user_metadata as { full_name?: string; phone?: string };
@@ -49,7 +50,7 @@ function CustomerAccount() {
         const cleanName = fullName.trim();
         const cleanPhone = phone.replace(/\D/g, "");
         if (cleanName.length < 3 || cleanPhone.length < 10 || cleanPhone.length > 11) throw new Error("Informe nome completo e telefone com DDD (10 ou 11 dígitos).");
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: cleanName, phone: cleanPhone } } });
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/conta?confirmacao=1`, data: { full_name: cleanName, phone: cleanPhone } } });
         if (error) throw error;
         if (data.session && data.user) {
           const { error: profileError } = await supabase.from("profiles").upsert({ id: data.user.id, full_name: cleanName, phone: cleanPhone }, { onConflict: "id" });
