@@ -13,9 +13,9 @@ export const DEFAULT_SHIPPING_SETTINGS: ShippingSettings = {
   free_pix_shipping_threshold_brl: FREE_PIX_SHIPPING_THRESHOLD_BRL,
 };
 
-type ShippingItem = { categorySlug?: string | null };
+type ShippingItem = { categorySlug?: string | null; productSlug?: string | null };
 
-export function hasPrinter(items: readonly ShippingItem[]): boolean {
+export function hasKitNatal3D(items: readonly ShippingItem[]): boolean {\n  return items.some((item) => item.productSlug === "kit-natal-3d");\n}\n\nexport function hasPrinter(items: readonly ShippingItem[]): boolean {
   return items.some((item) => item.categorySlug === "impressoras");
 }
 
@@ -37,7 +37,7 @@ export function shippingForOrder(
   items: readonly ShippingItem[] = [],
   settings: ShippingSettings = DEFAULT_SHIPPING_SETTINGS,
 ): number {
-  if (hasPrinter(items)) return 0;
+  if (hasPrinter(items) || hasKitNatal3D(items)) return 0;
   if (paymentMethod === "pix" && hasFreePixShipping(subtotal, items, settings)) return 0;
   return settings.fixed_shipping_brl;
 }
