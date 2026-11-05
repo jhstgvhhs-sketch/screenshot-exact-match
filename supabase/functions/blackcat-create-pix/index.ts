@@ -62,16 +62,16 @@ Deno.serve(async (request) => {
     const variantIds = [...new Set(items.map((item: { variant_id: string }) => item.variant_id))];
     const { data: variants, error: variantError } = await admin
       .from("product_variants")
-      .select("id,products(name,price,active,categories(slug))")
+      .select("id,products(name,slug,price,active,categories(slug))")
       .in("id", variantIds);
     if (variantError || !variants || variants.length !== variantIds.length)
       return json({ error: "Produto indisponível" }, 400);
-    const lines: { product_name: string; unit_price: number | string; quantity: number; category_slug: string | null }[] = [];
+    const lines: { product_name: string; product_slug: string; unit_price: number | string; quantity: number; category_slug: string | null }[] = [];
     for (const item of items as { variant_id: string; quantity: number }[]) {
       const variant = variants.find((row: { id: string }) => row.id === item.variant_id);
-      const product = (variant as { products?: { name: string; price: number | string; active: boolean; categories?: { slug: string } | null } | null })?.products;
+      const product = (variant as { products?: { name: string; slug: string; price: number | string; active: boolean; categories?: { slug: string } | null } | null })?.products;
       if (!product?.active) return json({ error: "Produto indisponível" }, 400);
-      lines.push({ product_name: product.name, unit_price: product.price, quantity: item.quantity, category_slug: product.categories?.slug ?? null });
+      lines.push({ product_name: product.name, product_slug: product.slug, unit_price: product.price, quantity: item.quantity, category_slug: product.categories?.slug ?? null });
     }
     const subtotalCents = lines.reduce((sum, line) => sum + cents(line.unit_price) * line.quantity, 0);
 
@@ -106,7 +106,7 @@ Deno.serve(async (request) => {
       }
     }
 
-    const shippingCents = pixShippingCents(subtotalCents, lines.some(line => line.category_slug === "impressoras"), rules);
+    const shippingCents = pixShippingCents(subtotalCents, lines.some(line => line.category_slug === "impressoras"), lines.some(line => line.product_slug === "kit-natal-3d"), rules);
     try {
       blackcatPixPayload({
         total: (subtotalCents - discountCents + shippingCents) / 100,
@@ -152,17 +152,17 @@ Deno.serve(async (request) => {
         throw new Error("missing-order-item-product-id");
       const productIds = [...new Set(dbLines.map(line => line.product_id as string))];
       const { data: lineProducts, error: productsError } = await admin.from("products")
-        .select("id,categories(slug)").in("id", productIds);
+        .select("id,slug,categories(slug)").in("id", productIds);
       if (productsError || !lineProducts || lineProducts.length !== productIds.length)
         throw new Error("Não foi possível confirmar as categorias dos produtos");
-      const categoryByProductId = new Map(lineProducts.map(product => [product.id, product.categories?.slug ?? null]));
+      const productInfoById = new Map(lineProducts.map(product => [product.id, { categorySlug: product.categories?.slug ?? null, productSlug: product.slug }]));
       chargePayload = blackcatPixPayload(
         order,
         dbLines.map(line => ({
           product_name: line.product_name,
           unit_price: line.unit_price,
           quantity: line.quantity,
-          category_slug: categoryByProductId.get(line.product_id as string) ?? null,
+          category_slug: productInfoById.get(line.product_id as string)?.categorySlug ?? null,\n          product_slug: productInfoById.get(line.product_id as string)?.productSlug ?? null,
         })),
         orderId, postbackUrl, rules,
       );
