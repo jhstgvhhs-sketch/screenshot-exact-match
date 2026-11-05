@@ -19,6 +19,7 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { Toaster } from "@/components/ui/sonner";
 import { RecentPurchases } from "@/components/site/RecentPurchases";
+import { RegistrationPrompt } from "@/components/site/RegistrationPrompt";
 
 function NotFoundComponent() {
   return (
@@ -135,6 +136,7 @@ function RootComponent() {
           </main>
           <Footer />
           <RecentPurchases />
+          <RegistrationPrompt />
           </div>}
           <Toaster richColors position="top-center" />
         </CartProvider>
