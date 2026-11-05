@@ -26,7 +26,8 @@ export const DEFAULT_PIX_SHIPPING_RULES: PixShippingRules = {
 // checkout can validate the charge before any order exists.
 export function pixShippingCents(
   subtotalCents: number,
-  hasPrinter: boolean,\n  hasKitNatal3D = false,
+  hasPrinter: boolean,
+  hasKitNatal3D = false,
   rules: PixShippingRules = DEFAULT_PIX_SHIPPING_RULES,
 ): number {
   if (hasPrinter || hasKitNatal3D) return 0;
@@ -48,7 +49,8 @@ export function blackcatPixPayload(
   if (!Number.isSafeInteger(amount) || amount <= 0 || !lines.length)
     throw new Error("Total ou frete inválido");
   const subtotal = lines.reduce((sum, line) => sum + cents(line.unit_price) * line.quantity, 0);
-  const hasPrinter = lines.some(line => line.category_slug === "impressoras");\n  const hasKitNatal3D = lines.some(line => line.product_slug === "kit-natal-3d");
+  const hasPrinter = lines.some(line => line.category_slug === "impressoras");
+  const hasKitNatal3D = lines.some(line => line.product_slug === "kit-natal-3d");
   // Zero freight is only valid when the store settings themselves produce it:
   // a zero fixed rate, a printer in the cart, or free Pix shipping above the threshold.
   const zeroFreightAllowed =
