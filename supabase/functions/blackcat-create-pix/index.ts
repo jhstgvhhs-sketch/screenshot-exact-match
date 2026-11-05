@@ -162,7 +162,8 @@ Deno.serve(async (request) => {
           product_name: line.product_name,
           unit_price: line.unit_price,
           quantity: line.quantity,
-          category_slug: productInfoById.get(line.product_id as string)?.categorySlug ?? null,\n          product_slug: productInfoById.get(line.product_id as string)?.productSlug ?? null,
+          category_slug: productInfoById.get(line.product_id as string)?.categorySlug ?? null,
+          product_slug: productInfoById.get(line.product_id as string)?.productSlug ?? null,
         })),
         orderId, postbackUrl, rules,
       );
