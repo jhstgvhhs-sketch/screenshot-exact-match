@@ -15,16 +15,16 @@ const input = "mt-1 w-full rounded-lg border border-input bg-background px-3 py-
 type Tab = "dados" | "enderecos" | "pedidos";
 function CustomerAccount() {
   const { user, loading } = useAuth();
-  const { aba } = Route.useSearch();
+  const { aba, cadastro, confirmacao } = Route.useSearch();
   const [tab, setTab] = useState<Tab>(aba === "pedidos" || aba === "enderecos" ? aba : "dados");
-  const [mode, setMode] = useState<"login" | "register" | "reset">(Route.useSearch().cadastro ? "register" : "login");
+  const [mode, setMode] = useState<"login" | "register" | "reset">(cadastro ? "register" : "login");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState(Route.useSearch().confirmacao ? "Se você acabou de confirmar seu e-mail, entre na sua conta para continuar." : "");
-  useEffect(() => { if (Route.useSearch().cadastro) setMode("register"); }, [Route.useSearch().cadastro]);
+  const [notice, setNotice] = useState(confirmacao ? "Se você acabou de confirmar seu e-mail, entre na sua conta para continuar." : "");
+  useEffect(() => { if (cadastro) setMode("register"); }, [cadastro]);
   useEffect(() => {
     if (!user) return;
     const metadata = user.user_metadata as { full_name?: string; phone?: string };
