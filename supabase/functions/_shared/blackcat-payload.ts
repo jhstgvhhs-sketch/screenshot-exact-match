@@ -27,8 +27,8 @@ export const DEFAULT_PIX_SHIPPING_RULES: PixShippingRules = {
 export function pixShippingCents(
   subtotalCents: number,
   hasPrinter: boolean,
-  hasKitNatal3D = false,
   rules: PixShippingRules = DEFAULT_PIX_SHIPPING_RULES,
+  hasKitNatal3D = false,
 ): number {
   if (hasPrinter || hasKitNatal3D) return 0;
   if (rules.freeEnabled && subtotalCents > rules.freeThresholdCents) return 0;
