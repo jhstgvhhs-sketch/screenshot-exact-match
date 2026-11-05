@@ -106,7 +106,7 @@ Deno.serve(async (request) => {
       }
     }
 
-    const shippingCents = pixShippingCents(subtotalCents, lines.some(line => line.category_slug === "impressoras"), lines.some(line => line.product_slug === "kit-natal-3d"), rules);
+    const shippingCents = pixShippingCents(subtotalCents, lines.some(line => line.category_slug === "impressoras"), rules, lines.some(line => line.product_slug === "kit-natal-3d"));
     try {
       blackcatPixPayload({
         total: (subtotalCents - discountCents + shippingCents) / 100,
