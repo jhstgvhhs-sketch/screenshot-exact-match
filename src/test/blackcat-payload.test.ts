@@ -35,6 +35,7 @@ describe('Printer Pix payload eligibility', () => {
 
 describe('Pix shipping rules resolved from store settings', () => {
   it('computes shipping with the same rules as place_order', () => {
+    expect(pixShippingCents(10000, false, undefined, true)).toBe(0);
     expect(pixShippingCents(59900, false)).toBe(3780);
     expect(pixShippingCents(60000, false)).toBe(3780);
     expect(pixShippingCents(60001, false)).toBe(0);
@@ -48,6 +49,11 @@ describe('Pix shipping rules resolved from store settings', () => {
     expect(blackcatPixPayload({ ...order, total: 125, shipping: 25 }, cheap, 'id', 'https://example.com', custom).amount).toBe(12500);
     expect(() => blackcatPixPayload({ ...order, total: 137.8, shipping: 37.8 }, cheap, 'id', 'https://example.com', custom)).toThrow();
     expect(blackcatPixPayload({ ...order, total: 400, shipping: 0 }, [{ product_name: 'Filamento', unit_price: 400, quantity: 1 }], 'id', 'https://example.com', custom).amount).toBe(40000);
+  });
+  it('accepts zero freight for Kit Natal 3D regardless of value in Pix validation', () => {
+    const kit = [{ product_name: 'Kit Natal 3D', product_slug: 'kit-natal-3d', category_slug: 'acessorios', unit_price: 66.87, quantity: 1 }];
+    expect(pixShippingCents(6687, false, undefined, true)).toBe(0);
+    expect(blackcatPixPayload({ ...order, total: 66.87, shipping: 0 }, kit, 'id', 'https://example.com').amount).toBe(6687);
   });
   it('accepts zero freight above R$ 600 with the default rules', () => {
     expect(blackcatPixPayload({ ...order, total: 700, shipping: 0 }, [{ product_name: 'Filamento', unit_price: 700, quantity: 1 }], 'id', 'https://example.com').amount).toBe(70000);
