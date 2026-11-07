@@ -19,7 +19,7 @@ export const productsQuery = () =>
   queryOptions({
     queryKey: ["products"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select(SELECT).eq("active", true).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("products").select(SELECT).eq("active", true).neq("slug", "bandeja-kit-natal-3d").order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as Product[]).map((p) => ({ ...p, price: Number(p.price), product_variants: [...p.product_variants].sort((a, b) => a.sort - b.sort) }));
     },
