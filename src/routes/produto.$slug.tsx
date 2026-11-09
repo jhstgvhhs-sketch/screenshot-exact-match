@@ -78,8 +78,6 @@ function ProdutoContent() {
   const [vid, setVid] = useState<string>();
   const [galleryImage, setGalleryImage] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
-  const [withTray, setWithTray] = useState(false);
-  const { data: trayProduct } = useQuery({ ...productQuery("bandeja-kit-natal-3d"), enabled: slug === "kit-natal-3d" });
   const [cep, setCep] = useState("");
   const [addr, setAddr] = useState<CepAddress | null>(null);
 
@@ -128,10 +126,6 @@ function ProdutoContent() {
       toast.error("Quantidade máxima disponível para este produto atingida");
       return;
     }
-    if (p.slug === "kit-natal-3d" && withTray && (!trayProduct || !trayProduct.product_variants.some((item) => item.stock >= requested))) {
-      toast.error("Bandeja indisponível na quantidade selecionada");
-      return;
-    }
     cart.add({
       categorySlug: p.categories?.slug,
       variantId: v.id,
@@ -143,14 +137,6 @@ function ProdutoContent() {
       quantity: requested,
       stock: v.stock,
     });
-    if (p.slug === "kit-natal-3d" && withTray) {
-      const tray = trayProduct?.product_variants.find((item) => item.stock > 0);
-      if (!tray || !trayProduct) {
-        toast.error("Bandeja indisponível no momento");
-        return;
-      }
-      cart.add({ categorySlug: trayProduct.categories?.slug, variantId: tray.id, productSlug: trayProduct.slug, name: trayProduct.name, color: tray.color, price: trayProduct.price, image: productImage(trayProduct), quantity: requested, stock: tray.stock });
-    }
     if (go) nav({ to: "/carrinho" });
     else toast.success("Adicionado ao carrinho");
   };
@@ -208,13 +194,6 @@ function ProdutoContent() {
             </dl>
           )}
           <PaymentPrice price={p.price} productName={p.name} isPrinter={p.categories?.slug === "impressoras"} prominent />
-          {p.slug === "kit-natal-3d" && (
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
-              <input type="checkbox" checked={withTray} onChange={(event) => setWithTray(event.target.checked)} disabled={!trayProduct?.product_variants.some((item) => item.stock > 0)} className="size-5 accent-primary" />
-              <span className="flex-1"><strong className="block">Adicionar bandeja ao kit</strong><span className="text-sm text-muted-foreground">Opcional — + R$ 19,90 por kit</span></span>
-              <strong>{brl(p.price + (withTray ? 19.9 : 0))}</strong>
-            </label>
-          )}
           {!simpleProduct && (
             <div>
               <p aria-live="polite" className="mb-2 text-sm font-semibold">
