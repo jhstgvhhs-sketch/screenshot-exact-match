@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
-import { createBluePagPix } from "../_shared/bluepag.ts";
-import { blackcatPixPayload, pixShippingCents, type PixShippingRules } from "../_shared/blackcat-payload.ts";
+import { createBluePagPix } from "./bluepag.ts";
+import { blackcatPixPayload, pixShippingCents, type PixShippingRules } from "./blackcat-payload.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
