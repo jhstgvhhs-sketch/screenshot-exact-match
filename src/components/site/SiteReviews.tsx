@@ -16,7 +16,7 @@ export function SiteReviews() {
         .eq("approved", true)
         .order("created_at", { ascending: false })
         .order("id")
-        .range(page * SIZE, page * SIZE + SIZE - 1);
+        .range(0, (page + 1) * SIZE - 1);
       if (error) throw error;
       return { reviews: (data ?? []) as PublicReview[], count: count ?? 0 };
     },
@@ -56,23 +56,14 @@ export function SiteReviews() {
             ))}
           </div>
           {query.data && query.data.count > SIZE && (
-            <div className="mt-5 flex items-center justify-center gap-4 text-sm">
-              <button
-                type="button"
-                disabled={page === 0}
-                className="text-primary underline disabled:opacity-40"
-                onClick={() => setPage(page - 1)}
-              >
-                Feedbacks anteriores
-              </button>
-              <span>Página {page + 1}</span>
+            <div className="mt-5 flex justify-center text-sm">
               <button
                 type="button"
                 disabled={(page + 1) * SIZE >= query.data.count}
-                className="text-primary underline disabled:opacity-40"
-                onClick={() => setPage(page + 1)}
+                className="rounded-lg border border-border px-5 py-2 font-semibold text-primary disabled:opacity-40"
+                onClick={() => setPage(current => current + 1)}
               >
-                Mais feedbacks
+                {((page + 1) * SIZE >= query.data.count) ? "Todos os feedbacks carregados" : "Carregar mais feedbacks"}
               </button>
             </div>
           )}
