@@ -44,6 +44,12 @@ Deno.serve(async (request) => {
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) return json({ error: "Sessão inválida" }, 401);
 
+    // Liberação temporária restrita ao e-mail autorizado para o teste real.
+    const allowedEmails = (Deno.env.get("BLUEPAG_PIX_ALLOWED_EMAILS") ?? "")
+      .split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+    if (!user.email || !allowedEmails.includes(user.email.toLowerCase()))
+      return json({ error: "Pix indisponível para esta conta. Nenhuma cobrança foi criada." }, 403);
+
     admin = createClient(url, serviceKey);
     const payload = await request.json().catch(() => null);
     const customer = payload?.customer;
