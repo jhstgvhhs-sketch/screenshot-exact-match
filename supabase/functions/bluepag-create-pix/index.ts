@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
-import { createBluePagPix } from "./_shared/bluepag.ts";
-import { blackcatPixPayload, pixShippingCents, type PixShippingRules } from "./_shared/blackcat-payload.ts";
+import { createBluePagPix } from "../_shared/bluepag.ts";
+import { blackcatPixPayload, pixShippingCents, type PixShippingRules } from "../_shared/blackcat-payload.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -185,7 +185,7 @@ Deno.serve(async (request) => {
         amount: Number((amount / 100).toFixed(2)),
         payer_name: String(order.customer_name),
         payer_email: String(order.customer_email),
-        payer_cpf: String(order.customer_cpf).replace(/\\D/g, ""),
+        payer_cpf: String(order.customer_cpf).replace(/\D/g, ""),
         description: `Pedido 3DFLEX ${String(orderId).slice(0, 8)}`,
         postback_url: postbackUrl,
       });
