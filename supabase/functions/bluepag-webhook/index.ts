@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
-import { getBluePagPayment } from "./_shared/bluepag.ts";
+import { getBluePagPayment } from "../_shared/bluepag.ts";
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
 Deno.serve(async(req)=>{
  if(req.method!=="POST")return json({error:"Method not allowed"},405);
