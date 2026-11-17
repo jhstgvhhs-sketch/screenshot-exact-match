@@ -56,7 +56,7 @@ export function Checkout() {
       if (review.changed) { replace(review.current); throw new Error("Os preços ou produtos disponíveis foram atualizados. Confira o resumo antes de continuar."); }
       const customer = Object.fromEntries(Array.from(deliveryData.entries()).map(([key, value]) => [key, String(value).trim()]));
       if (kit.code) customer.coupon_code = kit.code;
-      const { data, error } = await supabase.functions.invoke("blackcat-create-pix", {
+      const { data, error } = await supabase.functions.invoke("bluepag-create-pix", {
         body: { customer, items: items.map(item => ({ variant_id: item.variantId, quantity: item.quantity })) }
       });
       if (error) {

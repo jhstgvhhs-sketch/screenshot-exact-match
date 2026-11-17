@@ -24,3 +24,9 @@ verify_jwt = false
 # Every action validates the real user JWT and admin role server-side.
 [functions.tracking-email]
 verify_jwt = false
+
+
+[functions.bluepag-create-pix]
+verify_jwt = true
+[functions.bluepag-webhook]
+verify_jwt = false
