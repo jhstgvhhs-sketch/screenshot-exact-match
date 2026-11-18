@@ -42,10 +42,10 @@ Deno.serve(async (request) => {
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) return json({ error: "Sessão inválida" }, 401);
 
-    // Durante a validação, restringe a geração a e-mails autorizados.
-    // Após confirmar o fluxo em produção, defina BLUEPAG_PIX_TEST_MODE=false
-    // (ou remova a variável) para aceitar todos os clientes autenticados.
-    if (Deno.env.get("BLUEPAG_PIX_TEST_MODE") === "true") {
+    // Modo seguro por padrão: restringe a geração ao e-mail autorizado.
+    // Somente após validar um pagamento real, defina BLUEPAG_PIX_TEST_MODE=false
+    // para aceitar normalmente todos os clientes autenticados.
+    if (Deno.env.get("BLUEPAG_PIX_TEST_MODE") !== "false") {
       const allowedEmails = (Deno.env.get("BLUEPAG_PIX_ALLOWED_EMAILS") ?? "")
         .split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
       if (!user.email || !allowedEmails.includes(user.email.toLowerCase())) {
