@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 import {
   getBluePagPayment,
   verifyBluePagWebhookSignature,
-} from "../_shared/bluepag.ts";
+} from "./bluepag.ts";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
