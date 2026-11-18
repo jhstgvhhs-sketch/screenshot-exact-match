@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
-import { BluePagApiError, createBluePagPix, shouldReconcileCreateFailure } from "./bluepag.ts";
+import { BluePagApiError, createBluePagPix, shouldReconcileCreateFailure } from "../_shared/bluepag.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,7 +24,7 @@ Deno.serve(async (request) => {
   if (Deno.env.get("BLUEPAG_PIX_ENABLED") !== "true")
     return json({ error: "Pix em preparação. Nenhuma cobrança foi criada." }, 503);
 
-  if (!Deno.env.get("BLUEPAG_API_KEY")) return json({ error: "Gateway não configurado" }, 503);
+  if (!Deno.env.get("BLUEPAG_CLIENT_ID") || !Deno.env.get("BLUEPAG_CLIENT_SECRET"))\n    return json({ error: "Credenciais BluePag não configuradas" }, 503);
   let createdOrderId: string | null = null;
   let gatewayCalled = false;
   // deno-lint-ignore no-explicit-any
