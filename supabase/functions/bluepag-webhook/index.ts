@@ -1,76 +1,115 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
+import {
+  getBluePagPayment,
+  verifyBluePagWebhookSignature,
+} from "../_shared/bluepag.ts";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+  status,
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  // A assinatura é calculada sobre o corpo original, antes de qualquer parse JSON.
+  const rawBody = await req.text();
+  const validSignature = await verifyBluePagWebhookSignature(
+    rawBody,
+    req.headers.get("X-Webhook-Signature"),
+  );
+  if (!validSignature) return json({ error: "Assinatura inválida" }, 401);
+
+  let body: Record<string, unknown>;
   try {
-    const rawBody = await req.text();
-    const body = JSON.parse(rawBody);
+    body = JSON.parse(rawBody);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return json({ error: "Payload inválido" }, 400);
+    }
+  } catch {
+    return json({ error: "JSON inválido" }, 400);
+  }
 
-    // WebPag's documented business webhook is configured in its dashboard.
-    // It delivers the payment resource; we never trust callback status alone.
-    const paymentId = body?.data?.id ?? body?.payment_id ?? body?.id;
-    if ((typeof paymentId !== "string" && typeof paymentId !== "number") ||
-        !/^[0-9]{1,20}$/.test(String(paymentId))) {
-      return json({ error: "Invalid payment notification" }, 400);
+  const event = String(body.event ?? body.type ?? "");
+  if (event !== "transaction.completed" && event !== "transaction.failed") {
+    // Eventos de saque não pertencem ao fluxo de recebimento PIX da loja.
+    return json({ ok: true, ignored: true });
+  }
+
+  const data = body.data && typeof body.data === "object"
+    ? body.data as Record<string, unknown>
+    : {};
+  const transactionUuid =
+    data.transaction_uuid ?? data.uuid ?? body.transaction_uuid ?? body.uuid;
+  if (typeof transactionUuid !== "string" ||
+      transactionUuid.length < 8 || transactionUuid.length > 128) {
+    return json({ error: "UUID da transação ausente" }, 400);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return json({ error: "Webhook não configurado" }, 503);
+  }
+
+  try {
+    // Não confiamos no status do callback: consultamos a transação na API autenticada.
+    const gatewayPayment = await getBluePagPayment(transactionUuid);
+    if (gatewayPayment.uuid !== transactionUuid || gatewayPayment.type !== "pix") {
+      return json({ error: "Transação BluePag incompatível" }, 409);
+    }
+    if (gatewayPayment.amountBRL === null ||
+        !Number.isFinite(gatewayPayment.amountBRL) ||
+        gatewayPayment.amountBRL <= 0) {
+      return json({ error: "Valor da transação indisponível" }, 409);
     }
 
-    const url = Deno.env.get("SUPABASE_URL");
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const apiKey = Deno.env.get("BLUEPAG_API_KEY");
-    if (!url || !serviceKey || !apiKey) return json({ error: "Webhook não configurado" }, 503);
-
-    const response = await fetch(`https://api.bluepag.com.br/api/v1/payments/${encodeURIComponent(String(paymentId))}`, {
-      headers: { accept: "application/json", "content-type": "application/json", "auth-token": apiKey },
-      signal: AbortSignal.timeout(15_000),
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.data?.id) {
-      console.error(JSON.stringify({ fn: "bluepag-webhook", stage: "provider-lookup", httpStatus: response.status }));
-      return json({ error: "Payment verification unavailable" }, 503);
-    }
-
-    const data = result.data;
-    const pix = data.pix;
-    if (!pix || !pix.uuid || Number(data.status) === 0) return json({ error: "PIX payment not found" }, 404);
-
-    const admin = createClient(url, serviceKey);
-    const { data: payment, error } = await admin.from("pix_transactions")
-      .select("order_id,amount_cents,status")
-      .eq("transaction_id", String(pix.uuid))
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const { data: payment, error: lookupError } = await admin
+      .from("pix_transactions")
+      .select("order_id, amount_cents, status")
+      .eq("transaction_id", transactionUuid)
       .maybeSingle();
-    if (error) return json({ error: "Payment lookup unavailable" }, 503);
-    if (!payment) return json({ error: "Unknown transaction" }, 404);
 
-    const grossCents = Math.round(Number(pix.amount) * 100);
-    if (!Number.isFinite(grossCents) || grossCents !== payment.amount_cents ||
-        String(data.method_slug ?? "").toLowerCase() !== "pix") {
-      return json({ error: "Payment verification mismatch" }, 409);
+    if (lookupError) {
+      console.error(JSON.stringify({ fn: "bluepag-webhook", stage: "ledger-lookup" }));
+      return json({ error: "Não foi possível localizar o registro do PIX" }, 503);
+    }
+    if (!payment) return json({ error: "Transação não reconhecida" }, 404);
+
+    const amountCents = Math.round(gatewayPayment.amountBRL * 100);
+    if (!Number.isSafeInteger(amountCents) || amountCents !== payment.amount_cents) {
+      return json({ error: "Valor da transação não confere" }, 409);
     }
 
-    const status = Number(data.status);
-    const next = status === 40 ? "paid" : status === 60 || status === 30 ? "cancelled" : null;
-    if (!next) return json({ ok: true, pending: true });
+    if (gatewayPayment.status === "pending") {
+      return json({ ok: true, pending: true });
+    }
 
-    const { data: settlement, error: settleError } = await admin.rpc("settle_pix_order", {
+    const gatewayStatus = gatewayPayment.status === "paid" ? "paid" : "cancelled";
+    const { data: settlement, error: settlementError } = await admin.rpc("settle_pix_order", {
       p_order_id: payment.order_id,
-      p_transaction_id: String(pix.uuid),
+      p_transaction_id: transactionUuid,
       p_amount_cents: payment.amount_cents,
-      p_gateway_status: next,
+      p_gateway_status: gatewayStatus,
     });
-    if (settleError) {
-      console.error(JSON.stringify({ fn: "bluepag-webhook", stage: "settlement", httpStatus: 0 }));
-      return json({ error: "Settlement unavailable" }, 503);
+
+    if (settlementError) {
+      console.error(JSON.stringify({ fn: "bluepag-webhook", stage: "settlement" }));
+      return json({ error: "Não foi possível atualizar o pedido" }, 503);
     }
+
     if (["manual_review", "mismatch", "unknown_order"].includes(String(settlement))) {
-      return json({ error: "Payment requires manual reconciliation" }, 409);
+      return json({ error: "Transação exige conciliação manual" }, 409);
     }
     return json({ ok: true, result: settlement });
-  } catch {
-    console.error(JSON.stringify({ fn: "bluepag-webhook", stage: "verification", httpStatus: 0 }));
-    return json({ error: "Could not verify provider notification" }, 503);
+  } catch (error) {
+    // Logs contêm apenas etapa e status; nunca imprimimos credenciais ou dados pessoais.
+    console.error(JSON.stringify({
+      fn: "bluepag-webhook",
+      stage: "provider-verification",
+      error: error instanceof Error ? error.name : "UnknownError",
+    }));
+    return json({ error: "Não foi possível verificar a transação na BluePag" }, 503);
   }
 });
