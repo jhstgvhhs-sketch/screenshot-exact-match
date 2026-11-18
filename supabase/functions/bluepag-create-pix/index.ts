@@ -30,7 +30,8 @@ Deno.serve(async (request) => {
   if (!Deno.env.get("BLUEPAG_CLIENT_ID") || !Deno.env.get("BLUEPAG_CLIENT_SECRET")) return json({ error: "Gateway não configurado" }, 503);
   let createdOrderId: string | null = null;
   let gatewayCalled = false;
-  let admin: ReturnType<typeof createClient> | null = null;
+  // deno-lint-ignore no-explicit-any
+  let admin: ReturnType<typeof createClient<any>> | null = null;
   try {
     const token = request.headers.get("Authorization");
     if (!token?.startsWith("Bearer ")) return json({ error: "Autenticação necessária" }, 401);
@@ -75,7 +76,7 @@ Deno.serve(async (request) => {
     const lines: { product_name: string; product_slug: string; unit_price: number | string; quantity: number; category_slug: string | null }[] = [];
     for (const item of items as { variant_id: string; quantity: number }[]) {
       const variant = variants.find((row: { id: string }) => row.id === item.variant_id);
-      const product = (variant as { products?: { name: string; slug: string; price: number | string; active: boolean; categories?: { slug: string } | null } | null })?.products;
+      const product = (variant as unknown as { products?: { name: string; slug: string; price: number | string; active: boolean; categories?: { slug: string } | null } | null })?.products;
       if (!product?.active) return json({ error: "Produto indisponível" }, 400);
       lines.push({ product_name: product.name, product_slug: product.slug, unit_price: product.price, quantity: item.quantity, category_slug: product.categories?.slug ?? null });
     }
@@ -161,7 +162,7 @@ Deno.serve(async (request) => {
         .select("id,slug,categories(slug)").in("id", productIds);
       if (productsError || !lineProducts || lineProducts.length !== productIds.length)
         throw new Error("Não foi possível confirmar as categorias dos produtos");
-      const productInfoById = new Map(lineProducts.map(product => [product.id, { categorySlug: product.categories?.slug ?? null, productSlug: product.slug }]));
+      const productInfoById = new Map(lineProducts.map(product => [product.id, { categorySlug: (product.categories as unknown as { slug?: string } | null)?.slug ?? null, productSlug: product.slug }]));
       chargePayload = blackcatPixPayload(
         order,
         dbLines.map(line => ({
