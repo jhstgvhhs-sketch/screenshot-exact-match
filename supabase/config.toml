@@ -1,11 +1,11 @@
-project_id = "wexuhtwkwtieaiebhnje"
+project_id = "zbinwdhzquhvhbhyeqml"
 
-# Pix creation is authenticated by the customer's Supabase JWT and revalidated in the handler.
+# BluePag PIX creation is authenticated by the customer's Supabase JWT and revalidated by the handler.
 [functions.blackcat-create-pix]
 verify_jwt = true
 
-# Blackcat cannot send a Supabase user JWT. The handler verifies the transaction
-# against Blackcat's authenticated API and checks the transaction ID and amount.
+# BluePag cannot send a Supabase user JWT. The webhook validates X-Webhook-Signature
+# and verifies the PIX against BluePag API before settlement.
 [functions.blackcat-webhook]
 verify_jwt = false
 
