@@ -144,7 +144,7 @@ Deno.serve(async (request) => {
         name: `Pedido 3DFLEX ${String(orderId).slice(0, 8)}`,
         orderId: String(orderId),
         notificationUrl: postbackUrl,
-      });;
+      });
     } catch (gatewayError) {
       const ambiguous = shouldReconcileCreateFailure(gatewayError);
       const safeError = gatewayError instanceof BluePagApiError
@@ -181,9 +181,9 @@ Deno.serve(async (request) => {
       qr_code_base64: null
     });
     if (ledgerError) {
-      // The charge exists at the gateway but the ledger row is missing: manual reconciliation.
-      logFailure("ledger-insert", orderId, { transactionId: String(charge.transactionId).slice(0, 64) });
-      return json({ error: "Cobrança requer conciliação manual", orderId }, 503);
+      // Charge exists at provider. Persist reconciliation metadata outside the client response.
+      logFailure("ledger-insert", orderId, { providerPaymentId: charge.providerPaymentId, dbError: ledgerError.code ?? "unknown" });
+      return json({ error: "Cobrança criada no gateway, mas o registro interno precisa de conciliação. Não tente novamente.", orderId }, 503);
     }
     return json({ orderId, copyPaste: charge.copyPaste,
       qrCodeBase64: null, amountCents: amount });
