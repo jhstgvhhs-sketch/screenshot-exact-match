@@ -124,9 +124,11 @@ Deno.serve(async (request) => {
         description: `Pedido 3DFLEX ${String(orderId).slice(0, 8)}`,
         postback_url: postbackUrl,
       });
-    } catch {
+    } catch (gatewayError) {
       // Uncertain state: the gateway may have received the charge. Do NOT cancel — reconcile.
-      logFailure("gateway-call", orderId);
+      // The helper emits only a safe stage/status/code identifier, never credentials or payloads.
+      const reason = gatewayError instanceof Error ? gatewayError.message.slice(0, 120) : "unknown";
+      logFailure("gateway-call", orderId, { reason });
       return json({ error: "Resposta do gateway requer conciliação", orderId }, 503);
     }
     if (!charge?.transactionId || !charge?.copyPaste) {
