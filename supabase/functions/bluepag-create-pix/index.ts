@@ -24,7 +24,7 @@ Deno.serve(async (request) => {
   if (Deno.env.get("BLUEPAG_PIX_ENABLED") !== "true")
     return json({ error: "Pix em preparação. Nenhuma cobrança foi criada." }, 503);
 
-  if (!Deno.env.get("BLUEPAG_CLIENT_ID") || !Deno.env.get("BLUEPAG_CLIENT_SECRET")) return json({ error: "Gateway não configurado" }, 503);
+  if (!Deno.env.get("BLUEPAG_API_KEY")) return json({ error: "Gateway não configurado" }, 503);
   let createdOrderId: string | null = null;
   let gatewayCalled = false;
   // deno-lint-ignore no-explicit-any
@@ -140,13 +140,11 @@ Deno.serve(async (request) => {
     let charge;
     try {
       charge = await createBluePagPix({
-        amount: Number((amount / 100).toFixed(2)),
-        payer_name: String(order.customer_name),
-        payer_email: String(order.customer_email),
-        payer_cpf: String(order.customer_cpf).replace(/\D/g, ""),
-        description: `Pedido 3DFLEX ${String(orderId).slice(0, 8)}`,
-        postback_url: postbackUrl,
-      });
+        amountCents: amount,
+        name: `Pedido 3DFLEX ${String(orderId).slice(0, 8)}`,
+        orderId: String(orderId),
+        notificationUrl: postbackUrl,
+      });;
     } catch (gatewayError) {
       const ambiguous = shouldReconcileCreateFailure(gatewayError);
       const safeError = gatewayError instanceof BluePagApiError
