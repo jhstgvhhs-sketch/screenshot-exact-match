@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 import { createBluePagPix } from "./bluepag.ts";
-import { blackcatPixPayload, pixShippingCents, type PixShippingRules } from "./blackcat-payload.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,8 +12,6 @@ const json = (value: unknown, status = 200) => new Response(JSON.stringify(value
   status, headers: { ...corsHeaders, "Content-Type": "application/json" }
 });
 
-const cents = (value: number | string) => Math.round(Number(value) * 100);
-const stripAccents = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 // Secure log: function, stage and order id only. Never secrets, customer data or gateway payloads.
 const logFailure = (stage: string, orderId: string | null, extra: Record<string, unknown> = {}) =>
@@ -80,100 +77,31 @@ Deno.serve(async (request) => {
       if (!product?.active) return json({ error: "Produto indisponível" }, 400);
       lines.push({ product_name: product.name, product_slug: product.slug, unit_price: product.price, quantity: item.quantity, category_slug: product.categories?.slug ?? null });
     }
-    const subtotalCents = lines.reduce((sum, line) => sum + cents(line.unit_price) * line.quantity, 0);
-
-    const { data: ship } = await admin.from("shipping_settings")
-      .select("fixed_shipping_brl,free_pix_shipping_enabled,free_pix_shipping_threshold_brl")
-      .eq("id", "main").maybeSingle();
-    const rules: PixShippingRules = {
-      fixedShippingCents: cents(ship?.fixed_shipping_brl ?? 37.8),
-      freeThresholdCents: cents(ship?.free_pix_shipping_threshold_brl ?? 600),
-      freeEnabled: ship?.free_pix_shipping_enabled ?? true,
-    };
-
-    // Coupon: same rules as place_order, resolved before creating any record.
-    let discountCents = 0;
-    const rawCoupon = String(customer.coupon_code ?? "").trim();
-    const coupon = stripAccents(rawCoupon).toUpperCase() === "KITCONSERVACAO" ? "KITCONSERVACAO" : rawCoupon.toUpperCase();
-    if (coupon) {
-      const { data: coupons } = await admin.from("coupons").select("code,percent_off,amount_off,expires_at").eq("active", true);
-      const now = Date.now();
-      const found = (coupons ?? []).find((row: { code: string; expires_at: string | null }) =>
-        row.code.toUpperCase() === coupon && (!row.expires_at || Date.parse(row.expires_at) > now));
-      if (coupon === "KITCONSERVACAO") {
-        if (!found || found.percent_off != null || found.amount_off != null)
-          return json({ error: "Cupom indisponível" }, 400);
-        const { data: kit, error: kitError } = await admin.rpc("kit_conservation_preview", { _items: items });
-        if (kitError || !kit || Number(kit.kits) < 1)
-          return json({ error: "O cupom exige pelo menos 5 kg de filamentos MasterPrint" }, 400);
-      } else {
-        if (!found) return json({ error: "Cupom inválido" }, 400);
-        discountCents = Math.min(subtotalCents,
-          found.percent_off != null ? Math.round(subtotalCents * Number(found.percent_off) / 100) : cents(found.amount_off ?? 0));
-      }
-    }
-
-    const shippingCents = pixShippingCents(subtotalCents, lines.some(line => line.category_slug === "impressoras"), rules, lines.some(line => line.product_slug === "kit-natal-3d"));
-    try {
-      blackcatPixPayload({
-        total: (subtotalCents - discountCents + shippingCents) / 100,
-        shipping: shippingCents / 100,
-        customer_name: String(customer.name ?? ""), customer_email: String(customer.email ?? ""),
-        customer_phone: String(customer.phone ?? ""), customer_cpf: String(customer.cpf ?? ""),
-        ship_street: String(customer.street ?? ""), ship_number: String(customer.number ?? ""),
-        ship_complement: customer.complement ? String(customer.complement) : null,
-        ship_district: String(customer.district ?? ""), ship_city: String(customer.city ?? ""),
-        ship_state: String(customer.state ?? ""), ship_cep: String(customer.cep ?? ""),
-      }, lines, "pre-validation", postbackUrl, rules);
-    } catch (validationError) {
-      const reason = validationError instanceof Error ? validationError.message : "Dados do pedido inválidos";
-      logFailure("pre-validation", null, { reason });
-      return json({ error: reason }, 400);
-    }
-
     // ---- Phase 2: create the order (database computes the authoritative totals) ----
     const { data: orderId, error: orderError } = await userClient.rpc("place_order", {
-      _items: items, _customer: customer, _coupon: "", _method: "pix"
+      _items: items, _customer: customer, _coupon: String(customer.coupon_code ?? "") || null, _method: "pix"
     });
     if (orderError || !orderId) return json({ error: orderError?.message ?? "Falha ao criar pedido" }, 409);
     createdOrderId = orderId as string;
 
-    // ---- Phase 3: rebuild the payload from the stored order ----
-    const { data: order, error: orderReadError } = await admin.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).single();
-    // order_items.product_id has no FK constraint in the existing schema, so PostgREST
-    // cannot reliably embed products(categories(slug)) from order_items. Read IDs first,
-    // then resolve categories from products, where the category relationship is defined.
+    // ---- Phase 3: verify the persisted order before charging ----
+    const { data: order, error: orderReadError } = await admin.from("orders")
+      .select("id,user_id,total,customer_name,customer_email,customer_cpf")
+      .eq("id", orderId).eq("user_id", user.id).single();
     const { data: dbLines, error: linesReadError } = await admin.from("order_items")
       .select("product_name,unit_price,quantity,product_id").eq("order_id", orderId);
     const amount = Math.round(Number(order?.total) * 100);
-    let chargePayload: Record<string, unknown>;
     try {
-      // Keep diagnostics specific in server logs without exposing order/customer data to the browser.
       if (orderReadError) throw new Error(`order-read-failed:${orderReadError.code ?? "unknown"}`);
       if (linesReadError) throw new Error(`order-items-read-failed:${linesReadError.code ?? "unknown"}`);
       if (!order) throw new Error("order-not-found");
       if (!dbLines?.length) throw new Error("order-items-empty");
-      if (!Number.isSafeInteger(amount)) throw new Error("invalid-order-total");
-      if (amount <= 0) throw new Error("nonpositive-order-total");
-      if (dbLines.some(line => typeof line.product_id !== "string" || !line.product_id))
-        throw new Error("missing-order-item-product-id");
-      const productIds = [...new Set(dbLines.map(line => line.product_id as string))];
-      const { data: lineProducts, error: productsError } = await admin.from("products")
-        .select("id,slug,categories(slug)").in("id", productIds);
-      if (productsError || !lineProducts || lineProducts.length !== productIds.length)
-        throw new Error("Não foi possível confirmar as categorias dos produtos");
-      const productInfoById = new Map(lineProducts.map(product => [product.id, { categorySlug: (product.categories as unknown as { slug?: string } | null)?.slug ?? null, productSlug: product.slug }]));
-      chargePayload = blackcatPixPayload(
-        order,
-        dbLines.map(line => ({
-          product_name: line.product_name,
-          unit_price: line.unit_price,
-          quantity: line.quantity,
-          category_slug: productInfoById.get(line.product_id as string)?.categorySlug ?? null,
-          product_slug: productInfoById.get(line.product_id as string)?.productSlug ?? null,
-        })),
-        orderId, postbackUrl, rules,
-      );
+      if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error("invalid-order-total");
+      if (dbLines.some(line => !line.product_id || !Number.isInteger(line.quantity) || line.quantity < 1))
+        throw new Error("invalid-order-items");
+      if (!String(order.customer_name ?? "").trim() || !String(order.customer_email ?? "").trim() ||
+          !/^\\d{11}$/.test(String(order.customer_cpf ?? "").replace(/\\D/g, "")))
+        throw new Error("invalid-order-customer");
     } catch (validationError) {
       // Nothing was sent to the gateway: cancel the order and restore stock, leaving no orphan.
       const { error: releaseError } = await admin.rpc("release_unpaid_order_stock", { p_order_id: orderId, p_payment_status: "cancelado" });
