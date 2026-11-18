@@ -100,7 +100,7 @@ Deno.serve(async (request) => {
       if (dbLines.some(line => !line.product_id || !Number.isInteger(line.quantity) || line.quantity < 1))
         throw new Error("invalid-order-items");
       if (!String(order.customer_name ?? "").trim() || !String(order.customer_email ?? "").trim() ||
-          !/^\\d{11}$/.test(String(order.customer_cpf ?? "").replace(/\\D/g, "")))
+          !/^\d{11}$/.test(String(order.customer_cpf ?? "").replace(/\D/g, "")))
         throw new Error("invalid-order-customer");
     } catch (validationError) {
       // Nothing was sent to the gateway: cancel the order and restore stock, leaving no orphan.
