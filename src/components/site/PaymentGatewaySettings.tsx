@@ -14,6 +14,7 @@ const gatewayTable = () => (supabase as unknown as SupabaseClient).from("payment
 const options = [
   { value: "none", label: "Nenhum" },
   { value: "blackcat", label: "Blackcat Pay" },
+  { value: "bluepag", label: "BluePag" },
   { value: "mercadopago", label: "Mercado Pago" },
   { value: "asaas", label: "Asaas" },
   { value: "custom", label: "Outro gateway (requer adaptador de API)" },
