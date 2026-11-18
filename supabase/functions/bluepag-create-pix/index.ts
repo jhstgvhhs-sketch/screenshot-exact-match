@@ -146,7 +146,7 @@ Deno.serve(async (request) => {
         payerCpf: order.customer_cpf,
         description: "Pedido 3DFLEX " + String(orderId).slice(0, 8),
         postbackUrl,
-      });;
+      });
     } catch (gatewayError) {
       const ambiguous = shouldReconcileCreateFailure(gatewayError);
       const safeError = gatewayError instanceof BluePagApiError
