@@ -8,11 +8,11 @@ function isNewSupabaseApiKey(value: string): boolean {
 }
 
 // The public URL can be reachable only from the browser, so server requests go to the runtime URL of the same backend.
-function serverSupabaseUrl(publicUrl: string, supabaseKey: string): string | undefined {
+function serverSupabaseUrl(publicUrl: string, _supabaseKey: string): string | undefined {
   if (typeof window !== 'undefined' || typeof process === 'undefined') return undefined;
+  // Não permita que o runtime SSR redirecione a conexão para outro projeto.
   const serverUrl = process.env['SUPABASE_URL']?.replace(/\/+$/, '');
-  if (!serverUrl || serverUrl === publicUrl || process.env['SUPABASE_PUBLISHABLE_KEY'] !== supabaseKey) return undefined;
-  return serverUrl;
+  return serverUrl === publicUrl ? serverUrl : undefined;
 }
 
 function createSupabaseFetch(supabaseUrl: string, supabaseKey: string): typeof fetch {
@@ -47,10 +47,10 @@ function createSupabaseFetch(supabaseUrl: string, supabaseKey: string): typeof f
 
 
 function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env['VITE_SUPABASE_URL'] || process.env['SUPABASE_URL'];
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'];
+  // Backend 3DFLEX: projeto Supabase "333".
+  // A chave publishable é pública por definição; nenhuma chave secreta fica no navegador.
+  const SUPABASE_URL = "https://zbinwdhzquhvhbhyeqml.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Llm5___ukwhQwXMszXH_Rw_a-wM8aJg";
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
