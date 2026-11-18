@@ -106,19 +106,16 @@ export async function createBluePagPix(input: {
   };
 }
 
-export async function getBluePagPayment(uuid: string) {
-  // WebPag payment lookup is by numeric payment ID; keep provider payment ID in our ledger
-  // in a later schema revision if lookup by PIX UUID is not available from the provider API.
-  // The currently documented endpoint requires payment_id, so do not pretend UUID is accepted.
-  const { response, result } = await request("get-payment", `/payments/${encodeURIComponent(uuid)}`);
+export async function getBluePagPayment(paymentId: string) {
+  const { response, result } = await request("get-payment", `/payments/${encodeURIComponent(paymentId)}`);
   const data = result?.data as Record<string, unknown> | undefined;
   const pix = data?.pix as Record<string, unknown> | undefined;
-  if (!data || !pix || String(pix.uuid) !== uuid) {
+  if (!data || !pix || String(data.id) !== paymentId) {
     throw new BluePagApiError("get-payment", response.status, providerCode(result), false);
   }
   return {
-    uuid,
-    type: "pix",
+    uuid: String(pix.uuid),
+    type: String(data.method_slug ?? ""),
     status: Number(data.status) === 40 ? "paid" :
       Number(data.status) === 60 || Number(data.status) === 30 ? "cancelled" : "pending",
     amount_gross: Number(pix.amount),
