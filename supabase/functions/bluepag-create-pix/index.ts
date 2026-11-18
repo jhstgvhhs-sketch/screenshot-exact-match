@@ -141,10 +141,12 @@ Deno.serve(async (request) => {
     try {
       charge = await createBluePagPix({
         amountCents: amount,
-        name: `Pedido 3DFLEX ${String(orderId).slice(0, 8)}`,
-        orderId: String(orderId),
-        notificationUrl: postbackUrl,
-      });
+        payerName: order.customer_name,
+        payerEmail: order.customer_email,
+        payerCpf: order.customer_cpf,
+        description: "Pedido 3DFLEX " + String(orderId).slice(0, 8),
+        postbackUrl,
+      });;
     } catch (gatewayError) {
       const ambiguous = shouldReconcileCreateFailure(gatewayError);
       const safeError = gatewayError instanceof BluePagApiError
