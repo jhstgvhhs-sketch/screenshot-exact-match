@@ -56,19 +56,6 @@ Deno.serve(async (request) => {
 
     admin = createClient(url, serviceKey);
 
-    // Dupla trava: o segredo do servidor e a preferência do painel precisam estar ativos.
-    const { data: gatewaySettings, error: gatewaySettingsError } = await admin
-      .from("payment_gateway_settings")
-      .select("provider, pix_enabled")
-      .eq("id", "main")
-      .maybeSingle();
-    if (gatewaySettingsError || !gatewaySettings) {
-      logFailure("gateway-settings", null, { dbError: true });
-      return json({ error: "Não foi possível verificar a configuração de pagamento." }, 503);
-    }
-    if (gatewaySettings.provider !== "bluepag" || gatewaySettings.pix_enabled !== true) {
-      return json({ error: "O Pix BluePag está desativado nas configurações da loja." }, 503);
-    }
     const payload = await request.json().catch(() => null);
     const customer = payload?.customer;
     const items = payload?.items;
