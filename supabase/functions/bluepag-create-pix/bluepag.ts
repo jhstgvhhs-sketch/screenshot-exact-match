@@ -49,6 +49,11 @@ async function providerFetch(
     throw new BluePagApiError(stage, response.status, providerCode(result),
       stage === "create-pix" && isAmbiguousCreateFailure(response.status));
   }
+  if (result?.success === false) {
+    const code = providerCode(result);
+    throw new BluePagApiError(stage, response.status, code,
+      stage === "create-pix" && (code === null || code === "duplicate" || code === "processing"));
+  }
   return { response, result };
 }
 
