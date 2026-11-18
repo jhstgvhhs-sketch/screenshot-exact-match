@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
-import { createBluePagPix } from "./bluepag.ts";
+import { BluePagApiError, createBluePagPix, shouldReconcileCreateFailure } from "./bluepag.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -125,11 +125,27 @@ Deno.serve(async (request) => {
         postback_url: postbackUrl,
       });
     } catch (gatewayError) {
-      // Uncertain state: the gateway may have received the charge. Do NOT cancel — reconcile.
-      // The helper emits only a safe stage/status/code identifier, never credentials or payloads.
-      const reason = gatewayError instanceof Error ? gatewayError.message.slice(0, 120) : "unknown";
-      logFailure("gateway-call", orderId, { reason });
-      return json({ error: "Resposta do gateway requer conciliação", orderId }, 503);
+      const ambiguous = shouldReconcileCreateFailure(gatewayError);
+      const safeError = gatewayError instanceof BluePagApiError
+        ? { stage: gatewayError.stage, httpStatus: gatewayError.httpStatus, providerCode: gatewayError.providerCode }
+        : { stage: "unknown", httpStatus: 0, providerCode: null };
+      logFailure("gateway-call", orderId, { ...safeError, ambiguous });
+
+      if (!ambiguous) {
+        const { data: released, error: releaseError } = await admin.rpc("release_unpaid_order_stock", {
+          p_order_id: orderId, p_payment_status: "cancelado"
+        });
+        if (releaseError || released !== true) {
+          logFailure("pre-charge-cancel", orderId, { stockReleased: false, dbError: !!releaseError });
+          return json({ error: "O gateway recusou a solicitação, mas o pedido precisa de conferência.", orderId }, 503);
+        }
+        return json({ error: "O gateway não aceitou a cobrança. O pedido foi cancelado e o estoque liberado. Você pode tentar novamente." }, 502);
+      }
+
+      return json({
+        error: "Não foi possível confirmar se o gateway recebeu a cobrança. Não tente novamente; consulte Meus Pedidos.",
+        orderId
+      }, 503);
     }
     if (!charge?.transactionId || !charge?.copyPaste) {
       logFailure("gateway-response", orderId);
