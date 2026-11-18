@@ -23,37 +23,37 @@ npm i
 npm run dev
 ```
 
-## Checkout e pagamento
+## Supabase e checkout
+
+O frontend utiliza o projeto Supabase **333**:
+`zbinwdhzquhvhbhyeqml`. O endereço e a chave publishable desse projeto são usados
+pelo cliente web; a chave publishable é pública e não substitui credenciais de servidor.
 
 O checkout tem duas etapas: dados de entrega e pagamento.
 
-- **Pix:** o checkout chama a Edge Function `blackcat-create-pix`. A emissão real depende da função estar publicada, das migrações corretas no banco e dos secrets da Blackcat configurados. Mantenha `BLACKCAT_PIX_ENABLED=false` até concluir testes reais controlados.
-- **Cartão:** o site registra o pedido como pendente pelo RPC `place_order` e encaminha o cliente ao WhatsApp configurado em `store_settings.whatsapp` (com `VITE_CHECKOUT_WHATSAPP_NUMBER` como alternativa). O pagamento só deve ser marcado como pago após confirmação manual.
+- **Pix:** o checkout chama a Edge Function `bluepag-create-pix`. A cobrança é criada pela BluePag API v1 em BRL, com OAuth2 Client Credentials e Bearer JWT.
+- **Webhook:** `bluepag-webhook` valida HMAC-SHA256 pelo cabeçalho `X-Webhook-Signature` e consulta o pagamento na BluePag antes de liquidar o pedido.
+- **Cartão:** o site registra o pedido como pendente pelo RPC `place_order` e encaminha o cliente ao WhatsApp configurado em `store_settings.whatsapp`. O pagamento só deve ser marcado como pago após confirmação manual.
 - **Frete:** compras com qualquer impressora têm frete grátis no Pix ou cartão. Nos demais pedidos, o frete grátis acima de R$ 600,00 vale exclusivamente para Pix.
 - **Parcelamento:** compras com impressora anunciam até 10x sem juros no cartão; os demais produtos estão sujeitos aos juros da maquineta. Confirme as condições finais com o atendimento.
 
-Configure `VITE_CHECKOUT_WHATSAPP_NUMBER` com `55` + DDD + número se a loja ainda não tiver um WhatsApp salvo nas configurações públicas. Nunca configure credenciais Blackcat em variáveis `VITE_*`.
+Configure `VITE_CHECKOUT_WHATSAPP_NUMBER` com `55` + DDD + número se a loja ainda não tiver um WhatsApp salvo nas configurações públicas.
 
-## Blackcat Pix — configuração no servidor
+## BluePag PIX — configuração no servidor
 
-A integração usa a documentação https://docs.blackcatoficial.com/ e as funções
-`blackcat-create-pix` e `blackcat-webhook`. A cobrança envia CPF como
-`customer.document = { number, type: 'cpf' }`, endereço com `shipping.number`
-e uma linha de frete de 3780 centavos. Valores são calculados a partir do pedido
-salvo no banco, nunca dos preços enviados pelo navegador. São aceitas de 1 a 10
-unidades por variante.
+Configure somente em **Supabase Edge Function Secrets**; nunca no GitHub ou em variáveis `VITE_*`:
 
-Configure apenas em **Edge Function Secrets**, nunca no GitHub, no formulário
-administrativo ou em variáveis `VITE_*`:
+- `BLUEPAG_CLIENT_ID`
+- `BLUEPAG_CLIENT_SECRET`
+- `BLUEPAG_PIX_ENABLED`
+- `BLUEPAG_PIX_TEST_MODE`
+- `BLUEPAG_PIX_ALLOWED_EMAILS` (lista separada por vírgulas durante a validação)
 
-- `BLACKCAT_API_KEY`: chave secreta da conta aprovada.
-- `BLACKCAT_WEBHOOK_URL`: URL HTTPS pública de `blackcat-webhook`.
-- `BLACKCAT_PIX_ENABLED`: mantenha `false` até validar o fluxo completo.
+O modo de teste permanece restrito por padrão. Defina `BLUEPAG_PIX_TEST_MODE=false`
+somente depois de validar uma transação real e o webhook. Mantenha `BLUEPAG_PIX_ENABLED=false`
+até as credenciais, URL de postback e reconciliação serem verificadas.
 
-O webhook consulta a API autenticada da Blackcat para verificar transação e valor;
-não confia apenas no status recebido no POST. Antes da ativação, confirme as
-migrações do banco, a política de reserva/liberação de estoque vigente e o
-tratamento de retentativas de criação de cobrança (inclusive timeout e falha ao
-salvar o identificador no banco). Um erro depois da criação de pedido requer
-conciliação antes de repetir a tentativa. A publicação do código não configura
-secrets, não aplica migrações e não publica as Edge Functions automaticamente.
+A função de criação calcula o valor a partir do pedido persistido no banco, não dos
+preços informados pelo navegador. Em timeout ou resposta ambígua do gateway, o pedido
+fica pendente para conciliação e o cliente não deve gerar outro PIX. Saques/cashout
+não fazem parte do checkout da loja.
