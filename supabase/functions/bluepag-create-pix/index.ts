@@ -77,6 +77,29 @@ Deno.serve(async (request) => {
       if (!product?.active) return json({ error: "Produto indisponível" }, 400);
       lines.push({ product_name: product.name, product_slug: product.slug, unit_price: product.price, quantity: item.quantity, category_slug: product.categories?.slug ?? null });
     }
+    // Prevent a second PIX order while an earlier PIX order for this account is still pending.
+    // This also blocks retrying an ambiguous gateway response until it has been reconciled.
+    const { data: pendingPixOrders, error: pendingPixError } = await admin
+      .from("orders")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("payment_method", "pix")
+      .eq("payment_status", "pendente")
+      .eq("status", "aguardando_pagamento")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (pendingPixError) {
+      logFailure("pending-pix-check", null, { dbError: true });
+      return json({ error: "Não foi possível verificar pedidos Pix pendentes. Consulte Meus Pedidos antes de continuar." }, 503);
+    }
+    if (pendingPixOrders?.length) {
+      const pendingOrderId = String(pendingPixOrders[0].id);
+      return json({
+        error: "Você já possui um pedido Pix aguardando confirmação ou conciliação. Não gere outro Pix antes de verificar esse pedido.",
+        orderId: pendingOrderId
+      }, 409);
+    }
+
     // ---- Phase 2: create the order (database computes the authoritative totals) ----
     const { data: orderId, error: orderError } = await userClient.rpc("place_order", {
       _items: items, _customer: customer, _coupon: String(customer.coupon_code ?? "") || null, _method: "pix"
