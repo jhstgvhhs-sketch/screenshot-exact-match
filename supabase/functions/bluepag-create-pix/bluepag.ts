@@ -1,6 +1,5 @@
-const BASE = "https://api.bluepag.com.br/api/v1";
+const BASE = "https://api.bluepag.com.br/api";
 const REQUEST_TIMEOUT_MS = 20_000;
-let cachedToken: { value: string; expiresAt: number } | null = null;
 
 export class BluePagApiError extends Error {
   constructor(
